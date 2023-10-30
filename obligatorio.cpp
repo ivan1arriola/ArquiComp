@@ -188,7 +188,7 @@ short leer_puerto_entrada(string mensaje)
  */
 
 short arbol[AREA_MEMORIA];
-#define VACIO 157
+#define VACIO -1257 // 0x8000 deberia ir aqui pero hay desbordamiento
 
 void inicializar_memoria()
 {
@@ -302,10 +302,27 @@ void agregar_nodo_estatico(short num)
 
 void agregar_nodo_dinamico(short num)
 {
-    // Un nodo son 3 lugares consecutivos en memoria
-    // indice es el valor del nodo actual
-    // indice + 1 es el indice del hijo izquierdo
-    // indice + 2 es el indice del hijo derecho
+/* LETRA DE LA TAREA
+  Este arreglo representa un árbol de nodos, donde los nodos se organizan secuencialmente
+  en orden de creación. Cada nodo contiene referencias 'izq' y 'der' que son índices en
+  el arreglo del árbol, señalando los nodos hijos izquierdo y derecho, respectivamente.
+  Un valor de 0x8000 en las referencias 'izq' o 'der' indica que el nodo no tiene hijo izquierdo
+  o derecho, respectivamente.
+*/
+
+/* cada 3 entradas del arreglo arbol, representan 1 sola entrada en este nuevo arbol*/
+/* ArbolDinamico[3] == [arbol[9], arbol[10], arbol[11]] por ejemplo */
+
+    // Un nodo son 3 lugares consecutivos en arbol
+    // indice es el valor del nodo actual en arbolDinamico
+    // indice + 1 es el indice del hijo izquierdo en arbolDinamico 
+    // indice + 2 es el indice del hijo derecho en arbolDinamico 
+
+/*  
+    Logicamente existe arreglo de nodos arbolDinamico[AREA_MEMORIA/3]
+    Pero en realidad se guarda en el arreglo arbol[AREA_MEMORIA]
+*/
+
 
     if (arbol[0] == VACIO)
     {
@@ -317,7 +334,7 @@ void agregar_nodo_dinamico(short num)
     {
         // encuentra el primer lugar desocupado de la memoria
         short lugarLibre = 0;
-        for (int i = 0; i < AREA_MEMORIA; i += 3)
+        for (int i = 0; i < AREA_MEMORIA; i += 3) // cada 3 lugares es un nodo
         {
             if (arbol[i] == VACIO)
             {
@@ -326,13 +343,13 @@ void agregar_nodo_dinamico(short num)
             }
         }
 
-        if (lugarLibre + 2 > AREA_MEMORIA )
+        if (lugarLibre + 2 > AREA_MEMORIA ) // verifica que hay lugar para el nodo completo
         {
             escribir_puerto(PUERTO_LOG, CODIGO_ESCRIBIR_FUERA_DE_AREA);
             return;
         }
 
-        if (arbol[lugarLibre] != VACIO)
+        if (arbol[lugarLibre] != VACIO) // verifica que efectivamente esta vacio el lugar
         {
             escribir_puerto(PUERTO_LOG, CODIGO_ESCRIBIR_FUERA_DE_AREA);
             return;
@@ -342,33 +359,37 @@ void agregar_nodo_dinamico(short num)
         short indice = 0;
         while (indice < AREA_MEMORIA)
         {
-            if (arbol[indice] == num)
+            if (arbol[indice] == num) // verifica que el valor de num no exista en el arbol
             {
                 escribir_puerto(PUERTO_LOG, CODIGO_NODO_YA_EXISTE);
                 return;
             }
-            else if (arbol[indice] > num)
+            else if (arbol[indice] > num) // si num es menor, intenta enchufarlo en el hijo izquierdo
             {
-                if (arbol[indice + 1] == VACIO)
+                if (arbol[indice + 1] == VACIO) // el lugar indice+1 hace referencia al hijo izquierdo que es menor
                 {
-                    arbol[indice + 1] = lugarLibre;
+                    short referenciaEnArbolDinamico = lugarLibre / 3;
+                    arbol[indice + 1] = referenciaEnArbolDinamico; // si el lugar esta vacio, crea la referencia
                     break;
                 }
                 else
                 {
-                    indice = arbol[indice + 1];
+                    short referenciaEnArbolDinamico = arbol[indice + 1];
+                    indice = referenciaEnArbolDinamico * 3 ; // si el lugar no esta vacio, sigue buscando
                 }
             }
             else
             {
-                if (arbol[indice + 2] == VACIO)
+                if (arbol[indice + 2] == VACIO) // el lugar indice+2 hace referencia al hijo derecho que es mayor
                 {
-                    arbol[indice + 2] = lugarLibre;
+                    short referenciaEnArbolDinamico = lugarLibre / 3;
+                    arbol[indice + 2] = referenciaEnArbolDinamico;
                     break;
                 }
                 else
                 {
-                    indice = arbol[indice + 2];
+                    short referenciaEnArbolDinamico = arbol[indice + 2];
+                    indice = referenciaEnArbolDinamico * 3 ; // si el lugar no esta vacio, sigue buscando
                 }
             }
         }
@@ -661,7 +682,10 @@ void imprimir_memoria_estatico(short n)
 
 void imprimir_memoria_dinamico(short n)
 {
-    for (int i = 0; i < n; i += 3)
+    // n es la cantidad de nodos a imprimir
+    // cada nodo ocupa 3 espacios en el arreglo arbol
+    short cantidadNodos = n * 3;
+    for (int i = 0; i < cantidadNodos; i += 3)
     {
         escribir_puerto(PUERTO_SALIDA, arbol[i]);
         escribir_puerto(PUERTO_SALIDA, arbol[i + 1]);

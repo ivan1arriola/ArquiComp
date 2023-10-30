@@ -4,3 +4,4 @@
 *.o
 obligatorio
 arquisim.jar
+build/Debug/outDebug
