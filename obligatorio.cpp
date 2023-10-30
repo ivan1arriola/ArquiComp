@@ -468,16 +468,23 @@ short calcular_altura_dinamico(short indice)
         }
         if (arbol[indice + 1] == VACIO && arbol[indice + 2] != VACIO)
         {
-            return calcular_altura_dinamico(arbol[indice + 2]) + 1;
+            short indiceDerEnDinamico = arbol[indice + 2] * 3;
+            return calcular_altura_dinamico(indiceDerEnDinamico) + 1;
         }
 
         if (arbol[indice + 1] != VACIO && arbol[indice + 2] == VACIO)
         {
-            return calcular_altura_dinamico(arbol[indice + 1]) + 1;
+            short indiceIzqEnDinamico = arbol[indice + 1] * 3;
+            return calcular_altura_dinamico(indiceIzqEnDinamico) + 1;
         }
 
-        short alturaIzq = calcular_altura_dinamico(arbol[indice + 1]);
-        short alturaDer = calcular_altura_dinamico(arbol[indice + 2]);
+        
+        short indiceIzqEnDinamico = arbol[indice + 1] * 3;
+        short indiceDerEnDinamico = arbol[indice + 2] * 3;
+
+        short alturaIzq = calcular_altura_dinamico(indiceIzqEnDinamico);
+        short alturaDer = calcular_altura_dinamico(indiceDerEnDinamico);
+
         if (alturaIzq > alturaDer)
         {
             return alturaIzq + 1;
@@ -623,9 +630,18 @@ void imprimir_arbol_dinamico_ascendente(short indice)
 {
     if (arbol[indice] != VACIO)
     {
-        imprimir_arbol_dinamico_ascendente(arbol[indice + 1]);
+        if (arbol[indice + 1] != VACIO)
+        {
+            short indiceIzqEnDinamico = arbol[indice + 1] * 3;
+            imprimir_arbol_dinamico_ascendente(indiceIzqEnDinamico);
+        }
         escribir_puerto(PUERTO_SALIDA, arbol[indice]);
-        imprimir_arbol_dinamico_ascendente(arbol[indice + 2]);
+
+        if (arbol[indice + 2] != VACIO)
+        {
+            short indiceDerEnDinamico = arbol[indice + 2] * 3;
+            imprimir_arbol_dinamico_ascendente(indiceDerEnDinamico);
+        }
     }
 }
 
@@ -633,9 +649,18 @@ void imprimir_arbol_dinamico_descendente(short indice)
 {
     if (arbol[indice] != VACIO)
     {
-        imprimir_arbol_dinamico_descendente(arbol[indice + 2]);
+        if (arbol[indice + 2] != VACIO)
+        {
+            short indiceDerEnDinamico = arbol[indice + 2] * 3;
+            imprimir_arbol_dinamico_descendente(indiceDerEnDinamico);
+        }
         escribir_puerto(PUERTO_SALIDA, arbol[indice]);
-        imprimir_arbol_dinamico_descendente(arbol[indice + 1]);
+
+        if (arbol[indice + 1] != VACIO)
+        {
+            short indiceIzqEnDinamico = arbol[indice + 1] * 3;
+            imprimir_arbol_dinamico_descendente(indiceIzqEnDinamico);
+        }
     }
 }
 
