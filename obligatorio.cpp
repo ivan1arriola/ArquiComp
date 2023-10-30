@@ -434,6 +434,11 @@ void calcular_altura()
 // recursivo
 short calcular_altura_estatico(short indice)
 {
+    if (indice >AREA_MEMORIA)
+    {
+        return 0;
+    }
+
     if (arbol[indice] == VACIO)
     {
         return 0;
@@ -456,6 +461,11 @@ short calcular_altura_estatico(short indice)
 // recursivo
 short calcular_altura_dinamico(short indice)
 {
+    if (indice >AREA_MEMORIA)
+    {
+        return 0;
+    }
+    
     if (arbol[indice] == VACIO)
     {
         return 0;
@@ -608,6 +618,10 @@ void imprimir_arbol(short orden)
 
 void imprimir_arbol_estatico_ascendente(short indice)
 {
+    if (indice >AREA_MEMORIA)
+    {
+        return;
+    }
     if (arbol[indice] != VACIO)
     {
         imprimir_arbol_estatico_ascendente(indice * 2 + 1);
@@ -618,6 +632,10 @@ void imprimir_arbol_estatico_ascendente(short indice)
 
 void imprimir_arbol_estatico_descendente(short indice)
 {
+    if (indice >AREA_MEMORIA)
+    {
+        return;
+    }
     if (arbol[indice] != VACIO)
     {
         imprimir_arbol_estatico_descendente(indice * 2 + 2);
@@ -628,6 +646,10 @@ void imprimir_arbol_estatico_descendente(short indice)
 
 void imprimir_arbol_dinamico_ascendente(short indice)
 {
+    if (indice >AREA_MEMORIA)
+    {
+        return;
+    }
     if (arbol[indice] != VACIO)
     {
         if (arbol[indice + 1] != VACIO)
@@ -647,6 +669,10 @@ void imprimir_arbol_dinamico_ascendente(short indice)
 
 void imprimir_arbol_dinamico_descendente(short indice)
 {
+    if (indice >AREA_MEMORIA)
+    {
+        return;
+    }
     if (arbol[indice] != VACIO)
     {
         if (arbol[indice + 2] != VACIO)
