@@ -1,6 +1,16 @@
 #include <stdio.h>
+// para almacenar que entra/sale de los puertos
+#include <iostream>
+#include <queue>
+#include <string>
+
 // string
-typedef char *string;
+//typedef char *string;
+
+// namespace std;
+using namespace std;
+
+
 
 /**
  * Descripción de la tarea
@@ -24,6 +34,14 @@ typedef char *string;
 #define PUERTO_SALIDA 21
 #define PUERTO_LOG 22
 #define AREA_MEMORIA 2048
+
+struct Puertos {
+    std::queue<int> entrada;
+    std::queue<int> salida;
+    std::queue<int> log;
+};
+
+Puertos PUERTO = Puertos();
 
 /***
  * Formato de entrada
@@ -128,14 +146,17 @@ void escribir_puerto(short puerto, short dato)
     if (puerto == PUERTO_ENTRADA)
     {
         nombre_puerto = "PUERTO_ENTRADA";
+        PUERTO.entrada.push(dato);
     }
     else if (puerto == PUERTO_SALIDA)
     {
         nombre_puerto = "PUERTO_SALIDA";
+        PUERTO.salida.push(dato);
     }
     else if (puerto == PUERTO_LOG)
     {
         nombre_puerto = "PUERTO_LOG";
+        PUERTO.log.push(dato);
     }
     else
     {
@@ -147,10 +168,12 @@ void escribir_puerto(short puerto, short dato)
 
 short leer_puerto_entrada(string mensaje)
 {
-    printf("%s  -  ", mensaje);
+    cout << mensaje << endl;
     printf("[Puerto Entrada] - ");
     short dato;
     scanf("%hd", &dato);
+    PUERTO.entrada.push(dato);
+
     return dato;
 }
 
@@ -635,10 +658,40 @@ void imprimir_memoria_dinamico(short n)
  * Comando: Detener programa
  * Descripción: Detiene la ejecución del programa.
  */
+
+// Función para imprimir los datos de los puertos
+void imprimir_puertos() {
+    std::cout << "Datos del puerto de entrada:" << std::endl;
+    while (!PUERTO.entrada.empty()) {
+        short valor = PUERTO.entrada.front();
+        std::cout << valor << " ";
+        PUERTO.entrada.pop();
+    }
+    std::cout << std::endl;
+
+    std::cout << "Datos del puerto de salida:" << std::endl;
+    while (!PUERTO.salida.empty()) {
+        short valor = PUERTO.salida.front();
+        std::cout << valor << " ";
+        PUERTO.salida.pop();
+    }
+    std::cout << std::endl;
+
+    std::cout << "Datos del puerto de log:" << std::endl;
+    while (!PUERTO.log.empty()) {
+        short valor = PUERTO.log.front();
+        std::cout << valor << " ";
+        PUERTO.log.pop();
+    }
+    std::cout << std::endl;
+}
+
+
 void detener_programa()
 {
     printf("Comando: Detener programa\n");
     CONTINUAR_PROGRAMA = 0;
+    imprimir_puertos();
 };
 
 /**
