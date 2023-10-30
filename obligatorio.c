@@ -1,6 +1,6 @@
 #include <stdio.h>
 // string
-typedef char* string;
+typedef char *string;
 
 /**
  * Descripción de la tarea
@@ -9,9 +9,8 @@ typedef char* string;
  * operaciones sobre él. Dentro de las funcionalidades ofrecidas se encuentra agregar nuevos
  * números al árbol, imprimir información sobre él y permitir varios formatos de almacenamiento
  * interno. Además, el sistema manejará una bitácora de ejecución, donde se indicará información
- * sobre parámetros leídos y acciones realizadas. 
+ * sobre parámetros leídos y acciones realizadas.
  * **/
-
 
 /**
  * Puertos de entrada y salida y constantes:
@@ -20,8 +19,6 @@ typedef char* string;
  * - PUERTO_LOG: 22
  * - AREA_MEMORIA: 2048 (palabras de 16 bits)
  */
-
-
 
 #define PUERTO_ENTRADA 20
 #define PUERTO_SALIDA 21
@@ -33,8 +30,8 @@ typedef char* string;
  * La entrada al sistema se realizará leyendo el puerto de entrada/salida de 16 bits de solo lectura
  * PUERTO_ENTRADA con el formato Comando [Parámetro]. Cada comando tiene predefinidos si
  * requiere cero o un parámetro. Tanto los comandos como los parámetros son de 16 bits.
- * La siguiente tabla muestra la codificación requerida para cada comando: 
-*/
+ * La siguiente tabla muestra la codificación requerida para cada comando:
+ */
 
 /*-----------------------------------------------------------------------------------------
 |     Comando     |   Parámetro   | Código |               Descripción                  |
@@ -59,7 +56,6 @@ typedef char* string;
 -----------------------------------------------------------------------------------------
 | Detener programa |               |  255   | Detiene la ejecución.                      |
 -----------------------------------------------------------------------------------------*/
-
 
 #define CAMBIAR_MODO 1
 #define AGREGAR_NODO 2
@@ -105,52 +101,58 @@ void detener_programa_dinamico();
  * El programa MOAB debe mantener una bitácora de ejecución a medida que va procesando
  * cada comando. Se utilizará el puerto de salida PUERTO_LOG. La bitácora deberá funcionar de la
  * siguiente forma:
- * 
- * 
+ *
+ *
  * - Antes de procesar un comando se debe mandar el código 64 seguido del comando a
  * procesar (incluyendo los parámetros, una palabra por cada dato).
- * 
- * 
+ *
+ *
  * - Luego de procesar el comando se deberá mandar el codigo correspondiente
- * 
- * 
+ *
+ *
  */
-#define CODIGO_BITACORA 64                  // Código de la bitácora
+#define CODIGO_BITACORA 64 // Código de la bitácora
 // Definiciones de códigos de la bitácora
-#define CODIGO_EXITO 0                      // Código 0 si la operación se pudo realizar con éxito.
-#define CODIGO_COMANDO_INVALIDO 1           // Código 1 si no se reconoce el comando (comando inválido).
-#define CODIGO_PARAMETRO_INVALIDO 2         // Código 2 si el valor de algún parámetro recibido es inválido.
-#define CODIGO_ESCRIBIR_FUERA_DE_AREA 4     // Código 4 si al agregar un nodo se intenta escribir fuera del área de memoria.
-#define CODIGO_NODO_YA_EXISTE 8             // Código 8 si el nodo a agregar ya se encuentra en el árbol.
+#define CODIGO_EXITO 0                  // Código 0 si la operación se pudo realizar con éxito.
+#define CODIGO_COMANDO_INVALIDO 1       // Código 1 si no se reconoce el comando (comando inválido).
+#define CODIGO_PARAMETRO_INVALIDO 2     // Código 2 si el valor de algún parámetro recibido es inválido.
+#define CODIGO_ESCRIBIR_FUERA_DE_AREA 4 // Código 4 si al agregar un nodo se intenta escribir fuera del área de memoria.
+#define CODIGO_NODO_YA_EXISTE 8         // Código 8 si el nodo a agregar ya se encuentra en el árbol.
 
+// Entrada - Salida de datos
 
-// Entrada - Salida de datos 
-
-void escribir_puerto(short puerto, short dato) {
+void escribir_puerto(short puerto, short dato)
+{
     const char *nombre_puerto;
 
-    if (puerto == PUERTO_ENTRADA) {
+    if (puerto == PUERTO_ENTRADA)
+    {
         nombre_puerto = "PUERTO_ENTRADA";
-    } else if (puerto == PUERTO_SALIDA) {
+    }
+    else if (puerto == PUERTO_SALIDA)
+    {
         nombre_puerto = "PUERTO_SALIDA";
-    } else if (puerto == PUERTO_LOG) {
+    }
+    else if (puerto == PUERTO_LOG)
+    {
         nombre_puerto = "PUERTO_LOG";
-    } else {
+    }
+    else
+    {
         nombre_puerto = "Desconocido";
     }
 
     printf("[%s] - %hd\n", nombre_puerto, dato);
 }
 
-short leer_puerto_entrada(string mensaje) {
+short leer_puerto_entrada(string mensaje)
+{
     printf("%s  -  ", mensaje);
     printf("[Puerto Entrada] - ");
     short dato;
     scanf("%hd", &dato);
     return dato;
 }
-
-
 
 /*
  * Almacenamiento del árbol:
@@ -163,14 +165,15 @@ short leer_puerto_entrada(string mensaje) {
  */
 
 short arbol[AREA_MEMORIA];
+#define VACIO 100
 
-void inicializar_memoria(){
-    for(int i = 0; i < AREA_MEMORIA; i++){
-        arbol[i] = 0x8000;
+void inicializar_memoria()
+{
+    for (int indice = 0; indice < AREA_MEMORIA; indice++)
+    {
+        arbol[indice] = VACIO;
     }
 }
-
-
 
 /**
  * Comando: Cambiar Modo
@@ -182,28 +185,31 @@ void inicializar_memoria(){
 #define MODO_ESTATICO 0
 #define MODO_DINAMICO 1
 
-
-
-void cambiar_modo(short nuevoModo) {
+void cambiar_modo(short nuevoModo)
+{
     short comando = (CAMBIAR_MODO << 8) | (0 & 0xFF);
     escribir_puerto(PUERTO_LOG, comando);
 
-
-    if (nuevoModo == MODO_ESTATICO) {
+    if (nuevoModo == MODO_ESTATICO)
+    {
+        inicializar_memoria();
         escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
         MODO = nuevoModo;
+        
+    }
+    else if (nuevoModo == MODO_DINAMICO)
+    {
         inicializar_memoria();
-    } else if (nuevoModo == MODO_DINAMICO) {
         escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
         MODO = nuevoModo;
-        inicializar_memoria();
-    } else {
+        
+    }
+    else
+    {
         escribir_puerto(PUERTO_LOG, CODIGO_PARAMETRO_INVALIDO);
         return;
     }
-
 }
-
 
 /**
  * Comando: Agregar Nodo
@@ -212,91 +218,128 @@ void cambiar_modo(short nuevoModo) {
  * nodo ya esté contenido en el árbol.
  */
 
-typedef struct{
+typedef struct
+{
     short num;
     short izq;
     short der;
 } nodo; // nodo de 6 bytes para el arbol dinamico
 
-
-void agregar_nodo(short num) {
+void agregar_nodo(short num)
+{
     printf("Comando: Agregar Nodo\n");
 
     short comando = (AGREGAR_NODO << 8) | (num & 0xFF);
     escribir_puerto(PUERTO_LOG, comando);
 
-    if (MODO == MODO_ESTATICO) {
+    if (MODO == MODO_ESTATICO)
+    {
         // Llamar a la función agregar_nodo_estatico
         agregar_nodo_estatico(num);
     }
-    else if (MODO == MODO_DINAMICO) {
+    else if (MODO == MODO_DINAMICO)
+    {
         // Llamar a la función agregar_nodo_dinamico
         agregar_nodo_dinamico(num);
     }
 }
 
-void agregar_nodo_estatico(short num){
+void agregar_nodo_estatico(short num)
+{
     short indice = 0;
 
-    while (indice < AREA_MEMORIA) {
-        if (arbol[indice] == 0x8000) {
+    while (indice < AREA_MEMORIA)
+    {
+        if (arbol[indice] == VACIO)
+        {
             arbol[indice] = num;
             escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
             return;
-        } else if (arbol[indice] == num) {
+        }
+        else if (arbol[indice] == num)
+        {
             escribir_puerto(PUERTO_LOG, CODIGO_NODO_YA_EXISTE);
             return;
-        } else if (arbol[indice] > num) {
+        }
+        else if (arbol[indice] > num)
+        {
             indice = indice * 2 + 1;
-        } else {
+        }
+        else
+        {
             indice = indice * 2 + 2;
         }
     }
+    escribir_puerto(PUERTO_LOG, CODIGO_ESCRIBIR_FUERA_DE_AREA);
 }
 
-void agregar_nodo_dinamico(short num){
+void agregar_nodo_dinamico(short num)
+{
     // Un nodo son 3 lugares consecutivos en memoria
     // indice es el valor del nodo actual
     // indice + 1 es el indice del hijo izquierdo
     // indice + 2 es el indice del hijo derecho
 
-    if (arbol[0] == 0x8000) {
+    if (arbol[0] == VACIO)
+    {
         // Si el árbol está vacío, crea un nuevo nodo y hazlo raíz.
         arbol[0] = num;
-    } else {
+    }
+    else
+    {
         // encuentra el primer lugar desocupado de la memoria
         short lugarLibre = 0;
-        for (int i = 0; i < AREA_MEMORIA; i += 3) {
-            if (arbol[i] == 0x8000) {
+        for (int i = 0; i < AREA_MEMORIA; i += 3)
+        {
+            if (arbol[i] == VACIO)
+            {
                 lugarLibre = i;
                 break;
             }
         }
 
-        if (lugarLibre + 2 > AREA_MEMORIA || lugarLibre != 0x8000) {
+        if (lugarLibre + 2 > AREA_MEMORIA )
+        {
             escribir_puerto(PUERTO_LOG, CODIGO_ESCRIBIR_FUERA_DE_AREA);
             return;
         }
-        
+
+        if (arbol[lugarLibre] != VACIO)
+        {
+            escribir_puerto(PUERTO_LOG, CODIGO_ESCRIBIR_FUERA_DE_AREA);
+            return;
+        }
 
         // encuentra el nodo padre del nuevo nodo
         short indice = 0;
-        while (indice < AREA_MEMORIA) {
-            if (arbol[indice] == num) {
+        while (indice < AREA_MEMORIA)
+        {
+            if (arbol[indice] == num)
+            {
                 escribir_puerto(PUERTO_LOG, CODIGO_NODO_YA_EXISTE);
                 return;
-            } else if (arbol[indice] > num) {
-                if (arbol[indice + 1] == 0x8000) {
+            }
+            else if (arbol[indice] > num)
+            {
+                if (arbol[indice + 1] == VACIO)
+                {
                     arbol[indice + 1] = lugarLibre;
                     break;
-                } else {
+                }
+                else
+                {
                     indice = arbol[indice + 1];
                 }
-            } else {
-                if (arbol[indice + 2] == 0x8000) {
+            }
+            else
+            {
+                if (arbol[indice + 2] == VACIO)
+                {
                     arbol[indice + 2] = lugarLibre;
                     break;
-                } else {
+                }
+                else
+                {
                     indice = arbol[indice + 2];
                 }
             }
@@ -305,29 +348,29 @@ void agregar_nodo_dinamico(short num){
         // crea el nuevo nodo
         arbol[lugarLibre] = num;
         escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-
     }
-    
 }
-
 
 /**
  * Comando: Calcular Altura
  * Descripción: Imprime la altura del árbol en el puerto de entrada/salida PUERTO_SALIDA.
  */
 
-void calcular_altura() {
+void calcular_altura()
+{
     printf("Comando: Calcular Altura\n");
 
     short comando = (CALCULAR_ALTURA << 8) | (0 & 0xFF);
     escribir_puerto(PUERTO_LOG, comando);
     short altura = 0;
 
-    if (MODO == MODO_ESTATICO) {
+    if (MODO == MODO_ESTATICO)
+    {
         // Llamar a la función calcular_altura_estatico
         altura = calcular_altura_estatico(0);
     }
-    else if (MODO == MODO_DINAMICO) {
+    else if (MODO == MODO_DINAMICO)
+    {
         // Llamar a la función calcular_altura_dinamico
         altura = calcular_altura_dinamico(0);
     }
@@ -336,82 +379,95 @@ void calcular_altura() {
     escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
 }
 
-
 // recursivo
-short calcular_altura_estatico(short indice){
-    if(arbol[indice] == 0x8000){
+short calcular_altura_estatico(short indice)
+{
+    if (arbol[indice] == VACIO)
+    {
         return 0;
     }
-    else{
+    else
+    {
         short alturaIzq = calcular_altura_estatico(indice * 2 + 1);
         short alturaDer = calcular_altura_estatico(indice * 2 + 2);
-        if(alturaIzq > alturaDer){
+        if (alturaIzq > alturaDer)
+        {
             return alturaIzq + 1;
         }
-        else{
+        else
+        {
             return alturaDer + 1;
         }
     }
 }
 
 // recursivo
-short calcular_altura_dinamico(short indice){
-    if(arbol[indice] == 0x8000){
+short calcular_altura_dinamico(short indice)
+{
+    if (arbol[indice] == VACIO)
+    {
         return 0;
     }
-    else{
-        if (arbol[indice + 1] == 0x8000 && arbol[indice + 2] == 0x8000){
+    else
+    {
+        if (arbol[indice + 1] == VACIO && arbol[indice + 2] == VACIO)
+        {
             return 1;
         }
-        if (arbol[indice + 1] == 0x8000 && arbol[indice + 2] != 0x8000){
+        if (arbol[indice + 1] == VACIO && arbol[indice + 2] != VACIO)
+        {
             return calcular_altura_dinamico(arbol[indice + 2]) + 1;
         }
 
-        if (arbol[indice + 1] != 0x8000 && arbol[indice + 2] == 0x8000){
+        if (arbol[indice + 1] != VACIO && arbol[indice + 2] == VACIO)
+        {
             return calcular_altura_dinamico(arbol[indice + 1]) + 1;
         }
 
         short alturaIzq = calcular_altura_dinamico(arbol[indice + 1]);
         short alturaDer = calcular_altura_dinamico(arbol[indice + 2]);
-        if(alturaIzq > alturaDer){
+        if (alturaIzq > alturaDer)
+        {
             return alturaIzq + 1;
         }
-        else{
+        else
+        {
             return alturaDer + 1;
         }
     }
 }
-    
-
-        
-
 
 /**
  * Comando: Calcular Suma
  * Descripción: Imprime la suma de todos los valores del árbol en el puerto de entrada/salida PUERTO_SALIDA.
  */
 
-void calcular_suma() {
+void calcular_suma()
+{
     printf("Comando: Calcular Suma\n");
 
     short comando = (CALCULAR_SUMA << 8) | (0 & 0xFF);
     escribir_puerto(PUERTO_LOG, comando);
 
-
-    if (MODO == MODO_ESTATICO) {
+    if (MODO == MODO_ESTATICO)
+    {
         // Llamar a la función calcular_suma_estatico
         calcular_suma_estatico();
     }
-    else if (MODO == MODO_DINAMICO) {
+    else if (MODO == MODO_DINAMICO)
+    {
         // Llamar a la función calcular_suma_dinamico
         calcular_suma_dinamico();
     }
 }
 
-void calcular_suma_estatico(){
+void calcular_suma_estatico()
+{
     short suma = 0;
-    for(int i = 0; i < AREA_MEMORIA; i++){
-        if(arbol[i] != 0x8000){
+    for (int i = 0; i < AREA_MEMORIA; i++)
+    {
+        if (arbol[i] != VACIO)
+        {
             suma += arbol[i];
         }
     }
@@ -419,10 +475,13 @@ void calcular_suma_estatico(){
     escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
 }
 
-void calcular_suma_dinamico(){
+void calcular_suma_dinamico()
+{
     short suma = 0;
-    for(int i = 0; i < AREA_MEMORIA; i += 3){
-        if(arbol[i] != 0x8000){
+    for (int i = 0; i < AREA_MEMORIA; i += 3)
+    {
+        if (arbol[i] != VACIO)
+        {
             suma += arbol[i];
         }
     }
@@ -439,32 +498,44 @@ void calcular_suma_dinamico(){
 #define ORDEN_MENOR_A_MAYOR 0
 #define ORDEN_MAYOR_A_MENOR 1
 
-
-void imprimir_arbol(short orden) {
+void imprimir_arbol(short orden)
+{
     printf("Comando: Imprimir Árbol\n");
 
     short comando = (IMPRIMIR_ARBOL << 8) | (orden & 0xFF);
     escribir_puerto(PUERTO_LOG, comando);
 
-    if (MODO == MODO_ESTATICO) {
-        if (orden == ORDEN_MENOR_A_MAYOR) {
+    if (MODO == MODO_ESTATICO)
+    {
+        if (orden == ORDEN_MENOR_A_MAYOR)
+        {
             imprimir_arbol_estatico_ascendente(0);
             escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-        } else if (orden == ORDEN_MAYOR_A_MENOR) {
+        }
+        else if (orden == ORDEN_MAYOR_A_MENOR)
+        {
             imprimir_arbol_estatico_descendente(0);
             escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-        } else {
+        }
+        else
+        {
             escribir_puerto(PUERTO_LOG, CODIGO_PARAMETRO_INVALIDO);
         }
     }
-    else if (MODO == MODO_DINAMICO) {
-        if (orden == ORDEN_MENOR_A_MAYOR) {
+    else if (MODO == MODO_DINAMICO)
+    {
+        if (orden == ORDEN_MENOR_A_MAYOR)
+        {
             imprimir_arbol_dinamico_ascendente(0);
             escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-        } else if (orden == ORDEN_MAYOR_A_MENOR) {
+        }
+        else if (orden == ORDEN_MAYOR_A_MENOR)
+        {
             imprimir_arbol_dinamico_descendente(0);
             escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-        } else {
+        }
+        else
+        {
             escribir_puerto(PUERTO_LOG, CODIGO_PARAMETRO_INVALIDO);
         }
     }
@@ -472,39 +543,45 @@ void imprimir_arbol(short orden) {
 
 // recursivo
 
-void imprimir_arbol_estatico_ascendente(short indice){
-    if(arbol[indice] != 0x8000){
+void imprimir_arbol_estatico_ascendente(short indice)
+{
+    if (arbol[indice] != VACIO)
+    {
         imprimir_arbol_estatico_ascendente(indice * 2 + 1);
         escribir_puerto(PUERTO_SALIDA, arbol[indice]);
         imprimir_arbol_estatico_ascendente(indice * 2 + 2);
     }
 }
 
-void imprimir_arbol_estatico_descendente(short indice){
-    if(arbol[indice] != 0x8000){
+void imprimir_arbol_estatico_descendente(short indice)
+{
+    if (arbol[indice] != VACIO)
+    {
         imprimir_arbol_estatico_descendente(indice * 2 + 2);
         escribir_puerto(PUERTO_SALIDA, arbol[indice]);
         imprimir_arbol_estatico_descendente(indice * 2 + 1);
     }
 }
 
-void imprimir_arbol_dinamico_ascendente(short indice){
-    if(arbol[indice] != 0x8000){
+void imprimir_arbol_dinamico_ascendente(short indice)
+{
+    if (arbol[indice] != VACIO)
+    {
         imprimir_arbol_dinamico_ascendente(arbol[indice + 1]);
         escribir_puerto(PUERTO_SALIDA, arbol[indice]);
         imprimir_arbol_dinamico_ascendente(arbol[indice + 2]);
     }
 }
 
-void imprimir_arbol_dinamico_descendente(short indice){
-    if(arbol[indice] != 0x8000){
+void imprimir_arbol_dinamico_descendente(short indice)
+{
+    if (arbol[indice] != VACIO)
+    {
         imprimir_arbol_dinamico_descendente(arbol[indice + 2]);
         escribir_puerto(PUERTO_SALIDA, arbol[indice]);
         imprimir_arbol_dinamico_descendente(arbol[indice + 1]);
     }
 }
-
-
 
 /**
  * Comando: Imprimir Memoria
@@ -514,44 +591,52 @@ void imprimir_arbol_dinamico_descendente(short indice){
  * simplemente guarda los 16 bits del número), mientras que en el modo dinámico se imprimirán
  * 6 * N bytes.
  */
-void imprimir_memoria(short n){
+void imprimir_memoria(short n)
+{
     printf("Comando: Imprimir Memoria\n");
     short comando = (IMPRIMIR_MEMORIA << 8) | (n & 0xFF);
     escribir_puerto(PUERTO_LOG, comando);
 
-    if (MODO == MODO_ESTATICO) {
+    if (MODO == MODO_ESTATICO)
+    {
         imprimir_memoria_estatico(n);
         escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
     }
-    else if (MODO == MODO_DINAMICO) {
+    else if (MODO == MODO_DINAMICO)
+    {
         imprimir_memoria_dinamico(n);
         escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-    } else {
+    }
+    else
+    {
         escribir_puerto(PUERTO_LOG, CODIGO_PARAMETRO_INVALIDO);
     }
 }
 
-void imprimir_memoria_estatico(short n){
-    for(int i = 0; i < n; i++){
+void imprimir_memoria_estatico(short n)
+{
+    for (int i = 0; i < n; i++)
+    {
         escribir_puerto(PUERTO_SALIDA, arbol[i]);
     }
-    
 }
 
-void imprimir_memoria_dinamico(short n){
-    for(int i = 0; i < n; i += 3){
+void imprimir_memoria_dinamico(short n)
+{
+    for (int i = 0; i < n; i += 3)
+    {
         escribir_puerto(PUERTO_SALIDA, arbol[i]);
         escribir_puerto(PUERTO_SALIDA, arbol[i + 1]);
         escribir_puerto(PUERTO_SALIDA, arbol[i + 2]);
     }
 }
 
-
 /**
  * Comando: Detener programa
  * Descripción: Detiene la ejecución del programa.
  */
-void detener_programa(){
+void detener_programa()
+{
     printf("Comando: Detener programa\n");
     CONTINUAR_PROGRAMA = 0;
 };
@@ -568,9 +653,7 @@ void detener_programa(){
  * de nodo.
  */
 
-
 // MODO ESTATICO ----------------------------------------------------------------------
-
 
 /*
  * Cada nodo ocupa 2 bytes / 16 bits.
@@ -580,7 +663,7 @@ void detener_programa(){
  * El árbol está ordenado de menor a mayor.
  * El árbol está representado en complemento a 2.
  * El entero mas grande que se puede representar es 0x7FFF.
- * El entero mas chico que se puede representar es 0x8000. 
+ * El entero mas chico que se puede representar es 0x8000.
  * Los nodos vacíos se representan con 0x8000.
  */
 
@@ -594,44 +677,60 @@ void detener_programa(){
  * El árbol está ordenado de menor a mayor.
  * El árbol está representado en complemento a 2.
  * El entero mas grande que se puede representar es 0x7FFF.
- * El entero mas chico que se puede representar es 0x8000. 
+ * El entero mas chico que se puede representar es 0x8000.
  * Los nodos vacíos se representan con 0x8000.
  */
 
-
 // Programa principal -----------------------------------------------------------------
 
-int main() {
+int main()
+{
     short comando;
     short parametro;
 
-    while (CONTINUAR_PROGRAMA) {
-        comando = leer_puerto_entrada("Ingrese un comando:");
-        
+    inicializar_memoria();
 
-        if (comando == CAMBIAR_MODO) {
+    while (CONTINUAR_PROGRAMA)
+    {
+        comando = leer_puerto_entrada("Ingrese un comando:");
+
+        if (comando == CAMBIAR_MODO)
+        {
             parametro = leer_puerto_entrada("Ingrese un modo:");
             cambiar_modo(parametro);
-        } else if (comando == AGREGAR_NODO) {
+        }
+        else if (comando == AGREGAR_NODO)
+        {
             parametro = leer_puerto_entrada("Ingrese un valor:");
             agregar_nodo(parametro);
-        } else if (comando == CALCULAR_ALTURA) {
+        }
+        else if (comando == CALCULAR_ALTURA)
+        {
             calcular_altura();
-        } else if (comando == CALCULAR_SUMA) {
+        }
+        else if (comando == CALCULAR_SUMA)
+        {
             calcular_suma();
-        } else if (comando == IMPRIMIR_ARBOL) {
+        }
+        else if (comando == IMPRIMIR_ARBOL)
+        {
             parametro = leer_puerto_entrada("Ingrese un orden (0 o 1):");
             imprimir_arbol(parametro);
-        } else if (comando == IMPRIMIR_MEMORIA) {
+        }
+        else if (comando == IMPRIMIR_MEMORIA)
+        {
             parametro = leer_puerto_entrada("Ingrese un N cantidad de nodos:");
             imprimir_memoria(parametro);
-        } else if (comando == DETENER_PROGRAMA) {
+        }
+        else if (comando == DETENER_PROGRAMA)
+        {
             detener_programa();
-        } else {
+        }
+        else
+        {
             escribir_puerto(PUERTO_LOG, CODIGO_COMANDO_INVALIDO);
         }
     }
 
     return 0;
 }
-
