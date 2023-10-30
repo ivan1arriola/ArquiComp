@@ -188,7 +188,7 @@ short leer_puerto_entrada(string mensaje)
  */
 
 short arbol[AREA_MEMORIA];
-#define VACIO 100
+#define VACIO 157
 
 void inicializar_memoria()
 {
@@ -210,8 +210,10 @@ void inicializar_memoria()
 
 void cambiar_modo(short nuevoModo)
 {
-    short comando = (CAMBIAR_MODO << 8) | (0 & 0xFF);
-    escribir_puerto(PUERTO_LOG, comando);
+    //short comando = (CAMBIAR_MODO << 8) | (0 & 0xFF);
+    //escribir_puerto(PUERTO_LOG, comando);
+    escribir_puerto(PUERTO_LOG, CAMBIAR_MODO);
+    escribir_puerto(PUERTO_LOG, nuevoModo);
 
     if (nuevoModo == MODO_ESTATICO)
     {
@@ -252,8 +254,10 @@ void agregar_nodo(short num)
 {
     printf("Comando: Agregar Nodo\n");
 
-    short comando = (AGREGAR_NODO << 8) | (num & 0xFF);
-    escribir_puerto(PUERTO_LOG, comando);
+    //short comando = (AGREGAR_NODO << 8) | (num & 0xFF);
+    //escribir_puerto(PUERTO_LOG, comando);
+    escribir_puerto(PUERTO_LOG, AGREGAR_NODO);
+    escribir_puerto(PUERTO_LOG, num);
 
     if (MODO == MODO_ESTATICO)
     {
@@ -307,6 +311,7 @@ void agregar_nodo_dinamico(short num)
     {
         // Si el árbol está vacío, crea un nuevo nodo y hazlo raíz.
         arbol[0] = num;
+        escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
     }
     else
     {
@@ -383,8 +388,11 @@ void calcular_altura()
 {
     printf("Comando: Calcular Altura\n");
 
-    short comando = (CALCULAR_ALTURA << 8) | (0 & 0xFF);
-    escribir_puerto(PUERTO_LOG, comando);
+    //short comando = (CALCULAR_ALTURA << 8) | (0 & 0xFF);
+    //escribir_puerto(PUERTO_LOG, comando);
+
+    escribir_puerto(PUERTO_LOG, CALCULAR_ALTURA);
+
     short altura = 0;
 
     if (MODO == MODO_ESTATICO)
@@ -469,8 +477,9 @@ void calcular_suma()
 {
     printf("Comando: Calcular Suma\n");
 
-    short comando = (CALCULAR_SUMA << 8) | (0 & 0xFF);
-    escribir_puerto(PUERTO_LOG, comando);
+    //short comando = (CALCULAR_SUMA << 8) | (0 & 0xFF);
+    //escribir_puerto(PUERTO_LOG, comando);
+    escribir_puerto(PUERTO_LOG, CALCULAR_SUMA);
 
     if (MODO == MODO_ESTATICO)
     {
@@ -525,8 +534,11 @@ void imprimir_arbol(short orden)
 {
     printf("Comando: Imprimir Árbol\n");
 
-    short comando = (IMPRIMIR_ARBOL << 8) | (orden & 0xFF);
-    escribir_puerto(PUERTO_LOG, comando);
+    //short comando = (IMPRIMIR_ARBOL << 8) | (orden & 0xFF);
+    //escribir_puerto(PUERTO_LOG, comando);
+
+    escribir_puerto(PUERTO_LOG, IMPRIMIR_ARBOL);
+    escribir_puerto(PUERTO_LOG, orden);
 
     if (MODO == MODO_ESTATICO)
     {
@@ -617,8 +629,11 @@ void imprimir_arbol_dinamico_descendente(short indice)
 void imprimir_memoria(short n)
 {
     printf("Comando: Imprimir Memoria\n");
-    short comando = (IMPRIMIR_MEMORIA << 8) | (n & 0xFF);
-    escribir_puerto(PUERTO_LOG, comando);
+    //short comando = (IMPRIMIR_MEMORIA << 8) | (n & 0xFF);
+    //escribir_puerto(PUERTO_LOG, comando);
+
+    escribir_puerto(PUERTO_LOG, IMPRIMIR_MEMORIA);
+    escribir_puerto(PUERTO_LOG, n);
 
     if (MODO == MODO_ESTATICO)
     {
@@ -661,36 +676,49 @@ void imprimir_memoria_dinamico(short n)
 
 // Función para imprimir los datos de los puertos
 void imprimir_puertos() {
-    std::cout << "Datos del puerto de entrada:" << std::endl;
+    std::cout << "20: ";
     while (!PUERTO.entrada.empty()) {
         short valor = PUERTO.entrada.front();
-        std::cout << valor << " ";
+        std::cout << valor;
         PUERTO.entrada.pop();
+        if (!PUERTO.entrada.empty()) {
+            std::cout << ",";
+        }
     }
     std::cout << std::endl;
 
-    std::cout << "Datos del puerto de salida:" << std::endl;
+    std::cout << "Puerto 21: ";
     while (!PUERTO.salida.empty()) {
         short valor = PUERTO.salida.front();
-        std::cout << valor << " ";
+        std::cout << valor;
         PUERTO.salida.pop();
+        if (!PUERTO.salida.empty()) {
+            std::cout << ",";
+        }
     }
     std::cout << std::endl;
 
-    std::cout << "Datos del puerto de log:" << std::endl;
+    std::cout << "Puerto 22: ";
     while (!PUERTO.log.empty()) {
         short valor = PUERTO.log.front();
-        std::cout << valor << " ";
+        std::cout << valor;
         PUERTO.log.pop();
+        if (!PUERTO.log.empty()) {
+            std::cout << ",";
+        }
     }
     std::cout << std::endl;
 }
 
 
+
 void detener_programa()
 {
     printf("Comando: Detener programa\n");
+
+    escribir_puerto(PUERTO_LOG, DETENER_PROGRAMA);
     CONTINUAR_PROGRAMA = 0;
+    escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
     imprimir_puertos();
 };
 
@@ -746,6 +774,7 @@ int main()
     while (CONTINUAR_PROGRAMA)
     {
         comando = leer_puerto_entrada("Ingrese un comando:");
+        escribir_puerto(PUERTO_LOG, CODIGO_BITACORA);
 
         if (comando == CAMBIAR_MODO)
         {
