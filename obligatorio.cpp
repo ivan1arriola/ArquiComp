@@ -103,7 +103,6 @@ void calcular_suma_estatico();
 void imprimir_arbol_estatico_ascendente(short indice);
 void imprimir_arbol_estatico_descendente(short indice);
 void imprimir_memoria_estatico(short n);
-void detener_programa_estatico();
 
 // version dinamica
 void agregar_nodo_dinamico(short num);
@@ -112,7 +111,6 @@ void calcular_suma_dinamico();
 void imprimir_arbol_dinamico_ascendente(short indice);
 void imprimir_arbol_dinamico_descendente(short indice);
 void imprimir_memoria_dinamico(short n);
-void detener_programa_dinamico();
 
 /**
  * Bitácora de ejecución:
@@ -215,14 +213,7 @@ void cambiar_modo(short nuevoModo)
     escribir_puerto(PUERTO_LOG, CAMBIAR_MODO);
     escribir_puerto(PUERTO_LOG, nuevoModo);
 
-    if (nuevoModo == MODO_ESTATICO)
-    {
-        inicializar_memoria();
-        escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
-        MODO = nuevoModo;
-        
-    }
-    else if (nuevoModo == MODO_DINAMICO)
+    if (nuevoModo == MODO_ESTATICO || nuevoModo == MODO_DINAMICO)
     {
         inicializar_memoria();
         escribir_puerto(PUERTO_LOG, CODIGO_EXITO);
@@ -848,8 +839,8 @@ int main()
 
     while (CONTINUAR_PROGRAMA)
     {
-        comando = leer_puerto_entrada("Ingrese un comando:");
         escribir_puerto(PUERTO_LOG, CODIGO_BITACORA);
+        comando = leer_puerto_entrada("Ingrese un comando:");
 
         if (comando == CAMBIAR_MODO)
         {
