@@ -111,6 +111,9 @@ comienzoWhile:
 	cmp ax, AGREGAR_NODO
     je agregarNodo
 
+    cmp ax, CALCULAR_ALTURA
+    je calcularAltura
+
     cmp ax, DETENER_PROGRAMA
     je detenerPrograma
 
@@ -183,10 +186,6 @@ agregarNodoModoEstatico: ; Nodo = [valor], hijos se calculan con el indice
             add si, 2  ; Agrega 2 para ir al hijo derecho
             jmp whileAgregarNodoEstatico ; Vuelve al bucle principal
 
-
-
-
-
 agregarNodoModoDinamico:; Nodo = [valor, Indice de hijoIzquierdo, Indice de hijoDerecho]
     ; Si el árbol está vacío, crea un nuevo nodo y hazlo raíz.
     mov si, 0
@@ -194,7 +193,7 @@ agregarNodoModoDinamico:; Nodo = [valor, Indice de hijoIzquierdo, Indice de hijo
     cmp cx, VACIO
     jne buscarLugarLibre
 
-    ; Árbol vacío, crea nuevo nodo raíz
+    ; �?rbol vacío, crea nuevo nodo raíz
     mov es:[si], ax
     mov ax, CODIGO_EXITO
     out PUERTO_LOG, ax
@@ -220,7 +219,9 @@ lugarNoVacio:
 
 lugarLibreEncontrado:
     ; Verifica que haya lugar para el nodo completo
-    cmp si + 2 , AREA_MEMORIA ; Compara si el hijo derecho está fuera del área de memoria
+    mov ax , si ; Carga el índice en memoria del lugar libre en AX
+    add ax , 2 ; Suma 2 para obtener el índice del ultimo elemento del nodo
+    cmp ax, AREA_MEMORIA ; Compara para ver si el índice del último elemento del nodo está fuera del área de memoria
     jg errorEscribirFueraDeArea ; Si es así, salta al manejo de error (fuera de área)
 
     ; Falta Verificar que efectivamente esta vacío el lugar
@@ -252,19 +253,21 @@ hijoDerechoNoVacio:
     jmp encontrarPadre; Vuelve a buscar el padre del nuevo nodo
 
 hijoIzquierdo:
-    cmp es:[si + 1], VACIO
+    cmp es:[si + 1], VACIO; Compara si el hijo izquierdo está vacío
+    jne hijoIzquierdoNoVacio; Si no está vacío, salta al hijoIzquierdoNoVacio
+    inc si; Si está vacío, agrega 1 para ir al hijo izquierdo
     jmp nuevoNodoCreado
 hijoIzquierdoNoVacio:
-    
-    mov si, es:[si + 1]; Como no está vacío, carga el índice del hijo izquierdo en SI
+    mov bx, si; Como no está vacío, carga el índice del hijo derecho en BX
+    add bx, si; Sumo para simular una multiplicación por 3
+    add bx, si; Porque el indice en memoria es 3 veces el indice en el arreglo de nodos
+    mov si, bx; Cargo el índice en memoria en SI
     jmp encontrarPadre; Vuelve a buscar el padre del nuevo nodo
 
-
-
-nuevoNodoCreado: ; Si queda apuntando 
+nuevoNodoCreado: ; SI queda apuntando al la direccion de uno de los hijos del padre del nuevo nodo
 
     mov cx, word ptr [lugarLibre]; Carga el índice del lugar libre en CX
-    mov es:[si], cx; Carga el índice del lugar libre en la dirección de memoria apuntada por ES:SI
+    mov es:[si], cx; Carga el índice del lugar libre en la dirección de memoria del hijo del padre del nuevo nodo
 
     ; Carga el nuevo nodo en el lugar libre
     mov si, cx; Carga el índice del lugar libre en SI, pero hay que multiplicarlo por 3
@@ -278,6 +281,7 @@ nuevoNodoCreado: ; Si queda apuntando
     jmp comienzoWhile
 
 
+calcularAltura:
 
 
 
@@ -354,7 +358,7 @@ detenerPrograma:
 
 ; ---------- SEGMENTO DE PUERTOS ----------
 .ports
-20: 1,0,2,5,2,-1,2,5,2,7,2,8,2,9,2,10,2,11,2,12,2,13,2,14,2,15,2,16,2,17,2,18,255
+20: 1,1,2,5,2,-5,2,-4,2,8,6,10,255
 
 
 
