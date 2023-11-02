@@ -219,7 +219,7 @@ conectarNodo: ; Conecta el nuevo nodo al árbol ; Se asume que el nuevo nodo no 
 conectarNodoLoop:
     mov cx, es:[di]; Carga el valor del nodo actual en CX
 
-    cmp cx, bx; Compara el valor actual con el valor a agregar (CX y BX)
+    cmp bx, cx; Compara el valor actual con el valor a agregar (CX y BX)
     jl buscarEnIzquierda ; Si el valor actual es menor que el valor a agregar, muévete a la izquierda
     jge buscarEnDerecha ; Si es mayor o igual, muévete a la derecha
 
@@ -598,6 +598,9 @@ imprimirMemoriaEstatico:
     jl parametroIncorrecto
 
 
+    mov bx , ax ; Guarda el valor de ax en bx
+    add bx, ax ; Multiplica por 2 para tener la cantidad de bytes a imprimir
+
     xor di, di; di = 0 
     mov cx, ax; cx = ax (cantidad de espacios de memoria a imprimir)
 
@@ -605,7 +608,7 @@ imprimirMemoriaEstatico:
         cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
         jae imprimirMemoriaEstaticoFin ; Si es así, salta al final
 
-        cmp di, ax; Compara si se llego a la cantidad de espacios de memoria a imprimir
+        cmp di, bx; Compara si se llego a la cantidad de espacios de memoria a imprimir
         jae imprimirMemoriaEstaticoFin ; Si es así, salta al final
 
         mov AX, word ptr ES:[di]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en AX
@@ -624,6 +627,17 @@ imprimirMemoriaDinamico:
     in ax, PUERTO_ENTRADA ; lee el n cantidad de espacios de memoria a imprimir
     out PUERTO_LOG, AX; imprime el valor en el puerto log
 
+    ;Si el valor es menor a 0, imprime error
+    cmp ax, 0
+    jl parametroIncorrecto
+
+    mov bx , ax ; Guarda el valor de ax en bx
+    add bx, ax ; 
+    add bx, ax ;
+    add bx, ax ; Multiplica por 6 para tener la cantidad de bytes a imprimir
+    add bx, ax ;
+    add bx, ax ;
+
     xor di, di; di = 0
     mov cx, ax; cx = ax (cantidad de espacios de memoria a imprimir)
 
@@ -631,7 +645,7 @@ imprimirMemoriaDinamico:
         cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
         jae imprimirMemoriaDinamicoFin ; Si es así, salta al final
 
-        cmp di, ax; Compara si se llego a la cantidad de espacios de memoria a imprimir
+        cmp di, bx; Compara si se llego a la cantidad de espacios de memoria a imprimir
         jae imprimirMemoriaDinamicoFin ; Si es así, salta al final
 
         mov AX, word ptr ES:[di]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en AX
@@ -698,6 +712,7 @@ imprimirArbolAscendenteEstatico:
 imprimirArbolAscendenteEstaticoR PROC
     pop DX; salva direccion de retorno
     pop di; Parametro de entrada
+    push DX; pusheo direccion de retorno
 
     cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
     jae imprimirArbolAscendenteEstaticoRFin ; Si es así, salta al final
@@ -708,7 +723,6 @@ imprimirArbolAscendenteEstaticoR PROC
 
     ; Imprime el valor anterior
     mov si, di; si = di
-    shl si, 1; Multiplica por 2
     shl si, 1; Multiplica por 2
     add si, 2; Suma 2 para tener el indice al hijo izquierdo (que es menor)
     push si; pasa por stack el indice para imprimir el hijo izquierdo
@@ -721,13 +735,13 @@ imprimirArbolAscendenteEstaticoR PROC
     ; Imprime el valor siguiente
     mov si, di; si = di
     shl si, 1; Multiplica por 2
-    shl si, 1; Multiplica por 2
     add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
     push si; pasa por stack el indice para imprimir el hijo derecho
     call imprimirArbolAscendenteEstaticoR
     pop si; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
 
     imprimirArbolAscendenteEstaticoRFin:
+        pop DX; Recupera direccion de retorno
         push di; Pushea el indice en memoria en la pila (Variable de entrada)
         push DX; pusheo direccion de retorno
         ret; Retorna
@@ -747,6 +761,7 @@ imprimirArbolDescendenteEstatico:
 imprimirArbolDescendenteEstaticoR PROC
     pop DX; salva direccion de retorno
     pop di; Parametro de entrada
+    push DX; pusheo direccion de retorno
 
     cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
     jae imprimirArbolDescendenteEstaticoRFin ; Si es así, salta al final
@@ -757,7 +772,6 @@ imprimirArbolDescendenteEstaticoR PROC
 
     ; Imprime el valor siguiente
     mov si, di; si = di
-    shl si, 1; Multiplica por 2
     shl si, 1; Multiplica por 2
     add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
     push si; pasa por stack el indice para imprimir el hijo derecho
@@ -770,13 +784,13 @@ imprimirArbolDescendenteEstaticoR PROC
     ; Imprime el valor anterior
     mov si, di; si = di
     shl si, 1; Multiplica por 2
-    shl si, 1; Multiplica por 2
     add si, 2; Suma 2 para tener el indice al hijo izquierdo (que es menor)
     push si; pasa por stack el indice para imprimir el hijo izquierdo
     call imprimirArbolDescendenteEstaticoR
     pop si; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
 
     imprimirArbolDescendenteEstaticoRFin:
+        pop DX; Recupero direccion de retorno
         push di; Pushea el indice en memoria en la pila (Variable de entrada)
         push DX; pusheo direccion de retorno
         ret; Retorna
@@ -793,8 +807,9 @@ imprimirArbolAscendenteDinamico:
     jmp comienzoWhile
 
 imprimirArbolAscendenteDinamicoR PROC
-    pop DX; salva direccion de retorno
-    pop di; Parametro de entrada
+    pop dx; salva direccion de retorno
+    pop di; Parametro de entrada (indice)
+    push dx; pusheo direccion de retorno
 
     cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
     jae imprimirArbolAscendenteDinamicoRFin ; Si es así, salta al final
@@ -804,39 +819,42 @@ imprimirArbolAscendenteDinamicoR PROC
     je imprimirArbolAscendenteDinamicoRFin ; Si es VACIO, se para la impresion
 
     ; Imprime el valor anterior
-    mov si, di; si = di
-    add si, 2; Suma 2 para tener el indice en el arreglo al hijo izquierdo (que es menor)
+    mov si, ES:[di + 2]; Carga el indice del hijo izquierdo en BX (cada indice ocupa 6 bytes)
 
     ;Transformo el indice en arreglo a indice en memoria
     mov bx, si; en bx guardo el indice en el arreglo de nodos
-    add bx, si; Sumo para simular una multiplicación por 3
-    add bx, si; Sumo para simular una multiplicación por 3
-    shl bx, 1; Multiplico por 2
+    add bx, si; 
+    add bx, si; 
+    add bx, si; 
+    add bx, si; 
+    add bx, si; 
+    mov si, bx; si = bx
 
-    push bx; pasa por stack el indice para imprimir el hijo izquierdo
+    push si; pasa por stack el indice para imprimir el hijo izquierdo
     call imprimirArbolAscendenteDinamicoR
-    pop bx; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
-
+    pop si; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
 
     ; Imprime el valor actual
     out PUERTO_SALIDA, ax; Imprime el valor del nodo actual en el puerto de salida
 
     ; Imprime el valor siguiente
-    mov si, di; si = di
-    add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
+    mov si, ES:[di + 4]; Carga el indice del hijo derecho en BX (cada indice ocupa 6 bytes)
 
     ;Transformo el indice en arreglo a indice en memoria
     mov bx, si; en bx guardo el indice en el arreglo de nodos
-    add bx, si; Sumo para simular una multiplicación por 3
-    add bx, si; Sumo para simular una multiplicación por 3
-    shl bx, 1; Multiplico por 2
+    add bx, si;
+    add bx, si;
+    add bx, si;
+    add bx, si;
+    add bx, si;
+    mov si, bx; si = bx
 
-    push bx; pasa por stack el indice para imprimir el hijo derecho
+    push si; pasa por stack el indice para imprimir el hijo derecho
     call imprimirArbolAscendenteDinamicoR
-    pop bx; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
-    
+    pop si; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
 
     imprimirArbolAscendenteDinamicoRFin:
+        pop dx; Recupero direccion de retorno (Para poner ponerlo arriba de todo)
         push di; Pushea el indice en memoria en la pila (Variable de entrada)
         push DX; pusheo direccion de retorno
         ret; Retorna
@@ -853,8 +871,9 @@ imprimirArbolDescendenteDinamico:
     jmp comienzoWhile
 
 imprimirArbolDescendenteDinamicoR PROC
-    pop DX; salva direccion de retorno
-    pop di; Parametro de entrada
+    pop dx; salva direccion de retorno
+    pop di; Parametro de entrada (indice)
+    push dx; pusheo direccion de retorno
 
     cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
     jae imprimirArbolDescendenteDinamicoRFin ; Si es así, salta al final
@@ -863,38 +882,45 @@ imprimirArbolDescendenteDinamicoR PROC
     cmp ax, VACIO  ; Compara si el valor es VACIO
     je imprimirArbolDescendenteDinamicoRFin ; Si es VACIO, se para la impresion
 
-    ; Imprime el valor siguiente
-    mov si, di; si = di
-    add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
+     ; Imprime el valor siguiente
+    mov si, ES:[di + 4]; Carga el indice del hijo derecho en BX (cada indice ocupa 6 bytes)
 
     ;Transformo el indice en arreglo a indice en memoria
     mov bx, si; en bx guardo el indice en el arreglo de nodos
-    add bx, si; Sumo para simular una multiplicación por 3
-    add bx, si; Sumo para simular una multiplicación por 3
-    shl bx, 1; Multiplico por 2
+    add bx, si;
+    add bx, si;
+    add bx, si;
+    add bx, si;
+    add bx, si;
+    mov si, bx; si = bx
 
-    push bx; pasa por stack el indice para imprimir el hijo derecho
+    push si; pasa por stack el indice para imprimir el hijo derecho
     call imprimirArbolDescendenteDinamicoR
-    pop bx; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+    pop si; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
 
     ; Imprime el valor actual
     out PUERTO_SALIDA, ax; Imprime el valor del nodo actual en el puerto de salida
 
+   
+
     ; Imprime el valor anterior
-    mov si, di; si = di
-    add si, 2; Suma 2 para tener el indice en el arreglo al hijo izquierdo (que es menor)
+    mov si, ES:[di + 2]; Carga el indice del hijo izquierdo en BX (cada indice ocupa 6 bytes)
 
     ;Transformo el indice en arreglo a indice en memoria
     mov bx, si; en bx guardo el indice en el arreglo de nodos
-    add bx, si; Sumo para simular una multiplicación por 3
-    add bx, si; Sumo para simular una multiplicación por 3
-    shl bx, 1; Multiplico por 2
+    add bx, si; 
+    add bx, si; 
+    add bx, si; 
+    add bx, si; 
+    add bx, si; 
+    mov si, bx; si = bx
 
-    push bx; pasa por stack el indice para imprimir el hijo izquierdo
+    push si; pasa por stack el indice para imprimir el hijo izquierdo
     call imprimirArbolDescendenteDinamicoR
-    pop bx; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+    pop si; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
 
     imprimirArbolDescendenteDinamicoRFin:
+        pop dx; Recupero direccion de retorno (Para poner ponerlo arriba de todo)
         push di; Pushea el indice en memoria en la pila (Variable de entrada)
         push DX; pusheo direccion de retorno
         ret; Retorna
@@ -943,7 +969,8 @@ detenerPrograma:
 
 ; ---------- SEGMENTO DE PUERTOS ----------
 .ports
-20: 1,0,3,1,1,3,1,0,2,4,3,1,1,2,5,3,1,0,2,100,2,128,2,60,2,40,2,20,2,22,3,1,1,2,50,2,40,2,30,2,45,2,46,2,47,2,48,3,255
+20: 1,1,2,5,2,-5,2,-4,2,8,6,10,255
+
 
 
 
