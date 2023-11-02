@@ -297,90 +297,98 @@ calcularAlturaEstatico:
 
 
 
-calcularAlturaEstaticoRecursivo PROC;
+calcularAlturaEstaticoRecursivo PROC
+
     pop dx; salvo direccion de retorno
     pop si; indice en memoria (Parametro de entrada)
     pop ax; variable de salida (altura)
-
-    push dx ; pusheo direccion de retorno
+    push dx; pusheo direccion de retorno (lo pusheo de nuevo porque lo necesito para el final)
 
     cmp si, AREA_MEMORIA; Compara si el índice en memoria está fuera del área de memoria
     jge sePasoDeMemoriaEstatico; Si es así, salta al final
 
     mov cx, es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
     cmp cx, VACIO; Compara si el valor es VACIO
-    je nodoVacioAlturaEstatico; Si es así, la altura es 0
+    je sePasoDeMemoriaEstatico; Si es así, la altura es 0
 
 obtenerAlturaIzqEstatico:
-    ; primero necesito el indice del hijo izquierdo
+
     mov di, si
     shl di, 1; Multiplica por 2
     add di, 2; Suma 2 para tener el indice al hijo izquierdo (que es menor)
 
-    push si; Pushea la direccion actual del nodo en la pila
-
-    push ax; Pushea la altura en la pila (Variable de salida) (A descartar realmente)
-    push di; Pushea el indice en memoria en la pila (Variable de entrada)
+    mov ax, di; Carga el indice del hijo izquierdo en AX (cada indice ocupa 2 bytes)
+    
+    
+    push si; Pushea la direccion actual del nodo en la pila 
+    push bx; Pushea la altura en la pila (Variable de salida)
+    push ax; Pushea el indice en memoria en la pila (Variable de entrada)
 
     call calcularAlturaEstaticoRecursivo
 
-    pop di; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
-    pop ax; Recupera la altura del hijo izquierdo y lo almaceno en AX
-
+    pop ax; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+    pop bx; Recupera la altura del hijo izquierdo y lo almaceno en BX
     pop si; Recupera la direccion actual del nodo
 
     jmp obtenerAlturaDerEstatico
 
+alturaIzqCeroEstatico: 
+    xor bx, bx; bx = 0 (altura)
+    jmp obtenerAlturaDerEstatico
+    
 obtenerAlturaDerEstatico:
-    ; primero necesito el indice del hijo derecho
-
     mov di, si
     shl di, 1; Multiplica por 2
     add di, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
 
-    push si; Pushea la direccion actual del nodo en la pila
+    mov ax, di; Carga el indice del hijo izquierdo en AX (cada indice ocupa 2 bytes)
+    
 
-    push ax; Pushea la altura en la pila (Variable de salida)
-    push di; Pushea el indice en memoria en la pila (Variable de entrada)
+   
+    push si; Pushea la direccion actual del nodo en la pila
+    push ax; Pushea para hacer lugar en la pila (Variable de salida)
+    push ax; Pushea el indice en memoria en la pila (Variable de entrada)
 
     call calcularAlturaEstaticoRecursivo
 
-    pop di; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
-    pop bx; Recupera la altura del hijo derecho y lo almaceno en BX
-
+    pop ax; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+    pop ax; Recupera la altura del hijo derecho y lo almaceno en AX
     pop si; Recupera la direccion actual del nodo
 
     jmp compararAlturaEstatico
 
+alturaDerCeroEstatico:
+    xor ax, ax; ax = 0 (altura)
+    jmp compararAlturaEstatico
+    
 compararAlturaEstatico:
-    cmp ax, bx; Compara la altura del hijo izquierdo AX con la altura del hijo derecho BX
+    cmp bx, ax; Compara la altura del hijo izquierdo con la altura del hijo derecho
     jge alturaMaxEnHijoIzquierdoEstatico; Si la altura del hijo izquierdo es mayor o igual, salta a alturaMaxEnHijoIzquierdoEstatico
 
 alturaMaxEnHijoDerechoEstatico:
-    mov ax, bx; Almacena la altura del hijo derecho en ax
-    inc ax; Incrementa en 1 la altura del hijo derecho
+    mov bx, ax; Almacena la altura del hijo derecho en bx
+    inc bx; Incrementa en 1 la altura del hijo derecho
     jmp calcularAlturaEstaticoRecursivoFin; Salta al final
 
 alturaMaxEnHijoIzquierdoEstatico:
-    inc ax; Incrementa en 1 la altura del hijo izquierdo
-    jmp calcularAlturaEstaticoRecursivoFin; Salta al final
-
-nodoVacioAlturaEstatico:
-    xor ax, ax; ax = 0 (altura)
+    inc bx; Incrementa en 1 la altura del hijo izquierdo
     jmp calcularAlturaEstaticoRecursivoFin; Salta al final
 
 sePasoDeMemoriaEstatico:
-    xor ax, ax; ax = 0 (altura)
+    xor bx, bx; bx = 0 (altura)
     jmp calcularAlturaEstaticoRecursivoFin; Salta al final
 
 calcularAlturaEstaticoRecursivoFin:
     pop dx; Recupero direccion de retorno (Para poner ponerlo arriba de todo)
 
-    push ax; Pushea la altura en la pila (Variable de salida)
+
+    push bx; Pushea la altura en la pila (Variable de salida)
     push si; Pushea el índice en memoria en la pila (Parametro de entrada)
     push dx; pusheo direccion de retorno (lo pusheo de nuevo porque lo necesito arriba de todo)
     ret; Retorna
 
+ 
+    
 calcularAlturaEstaticoRecursivo ENDP
 
 
@@ -969,7 +977,7 @@ detenerPrograma:
 
 ; ---------- SEGMENTO DE PUERTOS ----------
 .ports
-20: 1,1,2,5,2,-5,2,-4,2,8,6,10,255
+20: 1,0,3,1,1,3,1,0,2,4,3,1,1,2,5,3,1,0,2,100,2,128,2,60,2,40,2,20,2,22,3,1,1,2,50,2,40,2,30,2,45,2,46,2,47,2,48,3,255
 
 
 
