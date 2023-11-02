@@ -3,20 +3,14 @@
 .data  
 
 modo db 0 ; modo inicial estatico = 0, dinamico = 1
-
 num dw 0 ; numero a agregar al arbol
-
 lugarLibre dw 0 ; indice del lugar libre en memoria para AgregarNodoModoDinamico
-
-; Uso el puerto AX para leer entradas de los puertos y mandar salidas
 
 ; Constantes
 VACIO equ 0x8000
 
 ; En el segmento ES va a estar la raiz del arbol
 #define ES 7000h
-;SEGMENTO_ARBOL equ 7000h
-
 
 ; Puertos
 PUERTO_ENTRADA equ 20
@@ -52,36 +46,12 @@ ORDEN_DESCENDENTE equ 1
 
 
 ; Area de Memoria
-AREA_MEMORIA equ 2048
-
-
-
-; ---------- SEGMENTO DE CODIGO ----------
-; Registros de uso general
-; AX, BX, CX, DX, SI, DI, BP, SP
-
-; AX: Registro acumulador
-; BX: Registro base 
-; CX: Registro contador
-; DX: Registro de datos
-; SI: Registro de fuente
-; DI: Registro de destino
-; BP: Registro de base
-; SP: Registro de pila
-
-
-; Registros de segmento
-; CS, DS, ES, SS
-
-; ES destinado a la memoria del arbol
-
-; Registros de apuntadores
-; IP, FLAGS
-
-
+AREA_MEMORIA equ 4096; 4096 bytes de memoria (2048 palabras de 16 bits)
 
 
 .code
+
+jmp comienzoWhile; Salta al comienzo del bucle principal
 
 ; Inicializa la memoria del arbol
 reiniciarMemoria:
@@ -125,9 +95,8 @@ comienzoWhile:
 
 
 cambiarModo:
-    in ax, PUERTO_ENTRADA ; nuevoModo = leer_puerto_entrada("Ingrese parametro (0 o 1):")
+    in ax, PUERTO_ENTRADA ; lee el valor del modo de la entrada
 	out PUERTO_LOG, AX; imprime el parametro en el puerto log
-
 
     cmp ax, 0
     je cambiarModoParametroCorrecto ; Salta a "cambiarModoParametroCorrecto" si ax es igual a 0
@@ -135,7 +104,6 @@ cambiarModo:
     cmp ax, 1
     je cambiarModoParametroCorrecto ; Salta a "cambiarModoParametroCorrecto" si ax es igual a 1
 	jmp parametroIncorrecto; Si no se cumple ninguna de las anteriores, el parametro es incorrecto
-
 
 	cambiarModoParametroCorrecto:
 		mov word ptr [modo], AX
@@ -148,7 +116,6 @@ agregarNodo:
     in ax, PUERTO_ENTRADA ; lee el valor del nodo de la entrada
 	out PUERTO_LOG, AX; imprime el valor en el puerto log
 
-
     cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
     jmp agregarNodoModoEstatico
 
@@ -160,11 +127,13 @@ agregarNodoModoEstatico: ; Nodo = [valor], hijos se calculan con el indice
 
     mov word ptr [num], ax ; Guarda el valor del nodo en la variable num
     mov si, 0  ; Inicializa el índice en 0
+
+
     whileAgregarNodoEstatico:
         cmp si, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
         jae errorEscribirFueraDeArea ; Si es así, salta al manejo de error (fuera de área)
 
-        mov CX, ES:[si]  ; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
+        mov CX, word ptr ES:[si]  ; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
         cmp CX, VACIO  ; Compara si el valor es VACIO
         je nodoVacioEncontrado ; Si es VACIO, se ha encontrado un lugar para el nodo
 
@@ -525,6 +494,258 @@ calcularSumaDinamico:
 
 
 
+
+imprimirArbol:
+    in ax, PUERTO_ENTRADA ; lee el valor del nodo de la entrada
+    out PUERTO_LOG, AX; imprime el valor en el puerto log
+
+    cmp ax, ORDEN_ASCENDENTE
+    je imprimirArbolAscendente
+
+    cmp ax, ORDEN_DESCENDENTE
+    je imprimirArbolDescendente
+
+    jmp parametroIncorrecto
+
+
+imprimirArbolAscendente:    
+
+    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    jmp imprimirArbolAscendenteEstatico
+
+    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    jmp imprimirArbolAscendenteDinamico
+
+imprimirArbolDescendente:
+
+    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    jmp imprimirArbolDescendenteEstatico
+
+    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    jmp imprimirArbolDescendenteDinamico
+
+
+imprimirArbolAscendenteEstatico:
+    xor di, di; di = 0 
+    push di;
+    call imprimirArbolAscendenteEstaticoR
+    pop di;
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+    jmp comienzoWhile
+    
+    
+    
+imprimirArbolAscendenteEstaticoR PROC
+    pop DX; salva direccion de retorno
+    pop di; Parametro de entrada
+
+    cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+    jae imprimirArbolAscendenteEstaticoRFin ; Si es así, salta al final
+
+    mov ax, ES:[di]  ; Carga el valor del nodo apuntado por ES:DI en ax
+    cmp ax, VACIO  ; Compara si el valor es VACIO
+    je imprimirArbolAscendenteEstaticoRFin ; Si es VACIO, se para la impresion
+
+    ; Imprime el valor anterior
+    mov si, di; si = di
+    shl si, 1; Multiplica por 2
+    shl si, 1; Multiplica por 2
+    add si, 2; Suma 2 para tener el indice al hijo izquierdo (que es menor)
+    push si; pasa por stack el indice para imprimir el hijo izquierdo
+    call imprimirArbolAscendenteEstaticoR
+    pop si; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+
+    ; Imprime el valor actual
+    out PUERTO_SALIDA, ax; Imprime el valor del nodo actual en el puerto de salida
+
+    ; Imprime el valor siguiente
+    mov si, di; si = di
+    shl si, 1; Multiplica por 2
+    shl si, 1; Multiplica por 2
+    add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
+    push si; pasa por stack el indice para imprimir el hijo derecho
+    call imprimirArbolAscendenteEstaticoR
+    pop si; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+
+    imprimirArbolAscendenteEstaticoRFin:
+        push di; Pushea el indice en memoria en la pila (Variable de entrada)
+        push DX; pusheo direccion de retorno
+        ret; Retorna
+
+imprimirArbolAscendenteEstaticoR ENDP
+
+
+imprimirArbolDescendenteEstatico:
+    xor di, di; di = 0 
+    push di;
+    call imprimirArbolDescendenteEstaticoR
+    pop di;
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+    jmp comienzoWhile
+
+imprimirArbolDescendenteEstaticoR PROC
+    pop DX; salva direccion de retorno
+    pop di; Parametro de entrada
+
+    cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+    jae imprimirArbolDescendenteEstaticoRFin ; Si es así, salta al final
+
+    mov ax, word ptr ES:[di]  ; Carga el valor del nodo apuntado por ES:DI en ax
+    cmp ax, VACIO  ; Compara si el valor es VACIO
+    je imprimirArbolDescendenteEstaticoRFin ; Si es VACIO, se para la impresion
+
+    ; Imprime el valor siguiente
+    mov si, di; si = di
+    shl si, 1; Multiplica por 2
+    shl si, 1; Multiplica por 2
+    add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
+    push si; pasa por stack el indice para imprimir el hijo derecho
+    call imprimirArbolDescendenteEstaticoR
+    pop si; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+
+    ; Imprime el valor actual
+    out PUERTO_SALIDA, ax; Imprime el valor del nodo actual en el puerto de salida
+
+    ; Imprime el valor anterior
+    mov si, di; si = di
+    shl si, 1; Multiplica por 2
+    shl si, 1; Multiplica por 2
+    add si, 2; Suma 2 para tener el indice al hijo izquierdo (que es menor)
+    push si; pasa por stack el indice para imprimir el hijo izquierdo
+    call imprimirArbolDescendenteEstaticoR
+    pop si; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+
+    imprimirArbolDescendenteEstaticoRFin:
+        push di; Pushea el indice en memoria en la pila (Variable de entrada)
+        push DX; pusheo direccion de retorno
+        ret; Retorna
+
+imprimirArbolDescendenteEstaticoR ENDP
+
+imprimirArbolAscendenteDinamico:
+    xor di, di; di = 0 
+    push di;
+    call imprimirArbolAscendenteDinamicoR
+    pop di;
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+    jmp comienzoWhile
+
+imprimirArbolAscendenteDinamicoR PROC
+    pop DX; salva direccion de retorno
+    pop di; Parametro de entrada
+
+    cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+    jae imprimirArbolAscendenteDinamicoRFin ; Si es así, salta al final
+
+    mov ax, word ptr ES:[di]  ; Carga el valor del nodo apuntado por ES:DI en ax
+    cmp ax, VACIO  ; Compara si el valor es VACIO
+    je imprimirArbolAscendenteDinamicoRFin ; Si es VACIO, se para la impresion
+
+    ; Imprime el valor anterior
+    mov si, di; si = di
+    add si, 2; Suma 2 para tener el indice en el arreglo al hijo izquierdo (que es menor)
+
+    ;Transformo el indice en arreglo a indice en memoria
+    mov bx, si; en bx guardo el indice en el arreglo de nodos
+    add bx, si; Sumo para simular una multiplicación por 3
+    add bx, si; Sumo para simular una multiplicación por 3
+    shl bx, 1; Multiplico por 2
+
+    push bx; pasa por stack el indice para imprimir el hijo izquierdo
+    call imprimirArbolAscendenteDinamicoR
+    pop bx; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+
+
+    ; Imprime el valor actual
+    out PUERTO_SALIDA, ax; Imprime el valor del nodo actual en el puerto de salida
+
+    ; Imprime el valor siguiente
+    mov si, di; si = di
+    add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
+
+    ;Transformo el indice en arreglo a indice en memoria
+    mov bx, si; en bx guardo el indice en el arreglo de nodos
+    add bx, si; Sumo para simular una multiplicación por 3
+    add bx, si; Sumo para simular una multiplicación por 3
+    shl bx, 1; Multiplico por 2
+
+    push bx; pasa por stack el indice para imprimir el hijo derecho
+    call imprimirArbolAscendenteDinamicoR
+    pop bx; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+    
+
+    imprimirArbolAscendenteDinamicoRFin:
+        push di; Pushea el indice en memoria en la pila (Variable de entrada)
+        push DX; pusheo direccion de retorno
+        ret; Retorna
+
+imprimirArbolAscendenteDinamicoR ENDP
+
+imprimirArbolDescendenteDinamico:
+    xor di, di; di = 0 
+    push di;
+    call imprimirArbolDescendenteDinamicoR
+    pop di;
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+    jmp comienzoWhile
+
+imprimirArbolDescendenteDinamicoR PROC
+    pop DX; salva direccion de retorno
+    pop di; Parametro de entrada
+
+    cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+    jae imprimirArbolDescendenteDinamicoRFin ; Si es así, salta al final
+
+    mov ax, word ptr ES:[di]  ; Carga el valor del nodo apuntado por ES:DI en ax
+    cmp ax, VACIO  ; Compara si el valor es VACIO
+    je imprimirArbolDescendenteDinamicoRFin ; Si es VACIO, se para la impresion
+
+    ; Imprime el valor siguiente
+    mov si, di; si = di
+    add si, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
+
+    ;Transformo el indice en arreglo a indice en memoria
+    mov bx, si; en bx guardo el indice en el arreglo de nodos
+    add bx, si; Sumo para simular una multiplicación por 3
+    add bx, si; Sumo para simular una multiplicación por 3
+    shl bx, 1; Multiplico por 2
+
+    push bx; pasa por stack el indice para imprimir el hijo derecho
+    call imprimirArbolDescendenteDinamicoR
+    pop bx; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+
+    ; Imprime el valor actual
+    out PUERTO_SALIDA, ax; Imprime el valor del nodo actual en el puerto de salida
+
+    ; Imprime el valor anterior
+    mov si, di; si = di
+    add si, 2; Suma 2 para tener el indice en el arreglo al hijo izquierdo (que es menor)
+
+    ;Transformo el indice en arreglo a indice en memoria
+    mov bx, si; en bx guardo el indice en el arreglo de nodos
+    add bx, si; Sumo para simular una multiplicación por 3
+    add bx, si; Sumo para simular una multiplicación por 3
+    shl bx, 1; Multiplico por 2
+
+    push bx; pasa por stack el indice para imprimir el hijo izquierdo
+    call imprimirArbolDescendenteDinamicoR
+    pop bx; Recupera el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+
+    imprimirArbolDescendenteDinamicoRFin:
+        push di; Pushea el indice en memoria en la pila (Variable de entrada)
+        push DX; pusheo direccion de retorno
+        ret; Retorna
+
+imprimirArbolDescendenteDinamicoR ENDP
+
+
+
+
+
 parametroIncorrecto:
     mov AX, CODIGO_PARAMETRO_INVALIDO
     out PUERTO_LOG, ax 
@@ -598,7 +819,7 @@ detenerPrograma:
 
 ; ---------- SEGMENTO DE PUERTOS ----------
 .ports
-20: 1,0,2,100,2,200,2,50,2,30,2,150,4,1,1,2,102,2,202,2,52,2,32,2,152,4,255
+20: 1,1,2,5,2,-5,2,-4,2,8,6,10,255
 
 
 
