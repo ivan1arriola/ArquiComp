@@ -114,6 +114,9 @@ comienzoWhile:
     cmp ax, CALCULAR_ALTURA
     je calcularAltura
 
+    cmp ax, CALCULAR_SUMA
+    je calcularSuma
+
     cmp ax, DETENER_PROGRAMA
     je detenerPrograma
 
@@ -179,11 +182,13 @@ agregarNodoModoEstatico: ; Nodo = [valor], hijos se calculan con el indice
             jmp errorNodoYaExiste ; Salta al manejo de error (nodo duplicado)
         moverIzquierda:
             shl si, 1  ; Mueve a la izquierda (multiplica por 2)
-            inc si  ; Agrega 1 para ir al hijo izquierdo
+            shl si, 1  ; Mueve a la izquierda (multiplica por 2)
+            add si, 2  ; Agrega 2 para ir al hijo izquierdo
             jmp whileAgregarNodoEstatico ; Vuelve al bucle principal
         moverDerecha:
             shl si, 1  ; Mueve a la derecha (multiplica por 2)
-            add si, 2  ; Agrega 2 para ir al hijo derecho
+            shl si, 1  ; Mueve a la derecha (multiplica por 2)
+            add si, 4  ; Agrega 4 para ir al hijo derecho
             jmp whileAgregarNodoEstatico ; Vuelve al bucle principal
 
 agregarNodoModoDinamico:; Nodo = [valor, Indice de hijoIzquierdo, Indice de hijoDerecho]
@@ -229,7 +234,6 @@ lugarLibreEncontrado:
     mov cx, es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
     cmp cx, VACIO ; Compara si el valor es VACIO
     jne errorEscribirFueraDeArea
-
 ; Encuentra el nodo padre del nuevo nodo
     xor si, si; si será el índice de la memoria
     mov ax, word ptr [num]; Carga el valor del nodo en AX
@@ -282,6 +286,242 @@ nuevoNodoCreado: ; SI queda apuntando al la direccion de uno de los hijos del pa
 
 
 calcularAltura:
+    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    jmp calcularAlturaEstatico
+
+    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    jmp calcularAlturaDinamico
+
+; Modo estatico
+
+calcularAlturaEstatico:
+    xor ax, ax; ax = 0 (altura)
+    xor si, si; si = 0 (indice en memoria)
+
+    push ax; Guarda el valor de ax en la pila (Variable de salida)
+    push si; Guarda el valor de si en la pila (Variable de entrada)
+
+    call calcularAlturaEstaticoRecursivo
+
+    pop si; Recupera el valor de si de la pila (Variable de entrada)
+    pop ax; Recupera el valor de ax de la pila (Variable de salida)
+
+    out PUERTO_SALIDA, ax; Imprime la altura en el puerto de salida
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+
+    jmp comienzoWhile
+
+
+calcularAlturaEstaticoRecursivo PROC
+    pop dx; salvo direccion de retorno
+
+    pop si; indice en memoria (Parametro de entrada)
+    pop ax; variable de salida (altura)
+
+    cmp si, AREA_MEMORIA; Compara si el índice en memoria está fuera del área de memoria
+    jge alturaCeroEstatico; Si es así, salta al final
+
+    mov cx, word ptr es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
+    cmp cx, VACIO; Compara si el valor es VACIO
+    je alturaCeroEstatico; Si es así, salta al final
+
+    ; Calcula la altura del hijo izquierdo
+    mov bx , si; en bx guardo el indice en memoria del hijo izquierdo
+    shl bx, 1; multiplico por 2
+    shl bx, 1; multiplico por 2
+    add bx, 2; y le sumo 2 para obtener el indice en memoria del hijo izquierdo
+
+    push dx; pusheo direccion de retorno
+    push ax; Pusheo AX para almacenar la altura del hijo izquierdo
+    push bx; Pusheo el indice en memoria del hijo izquierdo
+
+    call calcularAlturaEstaticoRecursivo
+
+    pop bx; Recupero el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+    pop bx; Recupero la altura del hijo izquierdo y lo almaceno en BX
+    pop dx ; recupero direccion de retorno
+
+    ; Calcula la altura del hijo derecho
+    mov cx , si; en cx guardo el indice en memoria del hijo derecho
+    shl cx, 1; multiplico por 2
+    shl cx, 1; multiplico por 2
+    add cx, 4; y le sumo 4 para obtener el indice en memoria del hijo derecho
+
+    push dx; pusheo direccion de retorno
+    push ax; Pusheo AX para almacenar la altura del hijo derecho
+    push cx; Pusheo el indice en memoria del hijo derecho
+
+    call calcularAlturaEstaticoRecursivo
+
+    pop cx; Recupero el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+    pop cx; Recupero la altura del hijo derecho y lo almaceno en CX
+    pop dx ; recupero direccion de retorno
+
+    cmp bx, cx; Compara la altura del hijo izquierdo con la altura del hijo derecho
+    jge alturaMaxEnHijoIzquierdo; Si la altura del hijo izquierdo es mayor o igual, salta a alturaMaxEnHijoIzquierdo
+
+    alturaMaxEnHijoDerecho:
+        mov ax, cx; Almacena la altura del hijo derecho en AX
+        inc ax; Incrementa en 1 la altura del hijo derecho
+        jmp calcularAlturaEstaticoRecursivoFin; Salta al final
+
+    alturaMaxEnHijoIzquierdo:
+        mov ax, bx; Almacena la altura del hijo izquierdo en AX
+        inc ax; Incrementa en 1 la altura del hijo izquierdo
+        jmp calcularAlturaEstaticoRecursivoFin; Salta al final
+
+    alturaCeroEstatico:
+        xor ax, ax; ax = 0 (altura)
+
+    calcularAlturaEstaticoRecursivoFin:
+        push ax; Pushea la altura en la pila (Variable de salida)
+        push si; Pushea el índice en memoria en la pila (Variable de entrada)
+        push dx; pusheo direccion de retorno
+        ret; Retorna
+
+calcularAlturaEstaticoRecursivo ENDP
+
+calcularAlturaDinamico:
+    xor ax, ax; ax = 0 (altura)
+    xor si, si; si = 0 (indice en memoria)
+
+    push ax; Guarda el valor de ax en la pila (Variable de salida)
+    push si; Guarda el valor de si en la pila (Variable de entrada)
+
+    ;call calcularAlturaDinamicoRecursivo
+
+    pop si; Recupera el valor de si de la pila (Variable de entrada)
+    pop ax; Recupera el valor de ax de la pila (Variable de salida)
+
+    out PUERTO_SALIDA, ax; Imprime la altura en el puerto de salida
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+
+    jmp comienzoWhile
+
+
+calcularAlturaDinamicoRecursivo PROC
+    pop si; indice en memoria (Parametro de entrada)
+    pop ax; variable de salida (altura)
+
+    cmp si, AREA_MEMORIA; Compara si el índice en memoria está fuera del área de memoria
+    jge alturaCeroDinamico; Si es así, salta al final
+
+    mov cx, es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
+    cmp cx, VACIO; Compara si el valor es VACIO
+    je alturaCeroDinamico; Si es así, salta al final
+
+calcularAlturaHijoIzquierdoDinamico:
+    mov bx , si; en bx guardo el indice en memoria del hijo izquierdo
+    add bx, 1; le sumo 1 para obtener el indice en memoria del hijo izquierdo
+
+    push ax; Pusheo AX para almacenar la altura del hijo izquierdo
+    push bx; Pusheo el indice en memoria del hijo izquierdo
+
+    call calcularAlturaDinamicoRecursivo
+
+    pop bx; Recupero el indice en memoria del hijo izquierdo (Lo voy a descartar realmente)
+    pop bx; Recupero la altura del hijo izquierdo y lo almaceno en BX
+
+calcularAlturaHijoDerechoDinamico:
+    mov cx , si; en cx guardo el indice en memoria del hijo derecho
+    add cx, 2; le sumo 2 para obtener el indice en memoria del hijo derecho
+
+    push ax; Pusheo AX para almacenar la altura del hijo derecho
+    push cx; Pusheo el indice en memoria del hijo derecho
+
+    call calcularAlturaDinamicoRecursivo
+
+    pop cx; Recupero el indice en memoria del hijo derecho (Lo voy a descartar realmente)
+    pop cx; Recupero la
+
+alturaCeroDinamico:
+    xor ax, ax; ax = 0 (altura)
+    jmp calcularAlturaDinamicoRecursivoFin; Salta al final
+
+alturaMaxEnHijoDerechoDinamico:
+    mov ax, cx; Almacena la altura del hijo derecho en AX
+    inc ax; Incrementa en 1 la altura del hijo derecho
+    jmp calcularAlturaDinamicoRecursivoFin; Salta al final
+
+alturaMaxEnHijoIzquierdoDinamico:
+    mov ax, bx; Almacena la altura del hijo izquierdo en AX
+    inc ax; Incrementa en 1 la altura del hijo izquierdo
+    jmp calcularAlturaDinamicoRecursivoFin; Salta al final
+
+calcularAlturaDinamicoRecursivoFin:
+    push ax; Pushea la altura en la pila (Variable de salida)
+    push si; Pushea el índice en memoria en la pila (Variable de entrada)
+    ret; Retorna
+
+    
+calcularAlturaDinamicoRecursivo ENDP
+
+
+
+calcularSuma:
+    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    jmp calcularSumaEstatico
+
+    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    jmp calcularSumaDinamico
+
+
+calcularSumaEstatico:
+    xor di, di; di = 0 (indice en memoria)
+	mov cx, AREA_MEMORIA
+    xor ax, ax; ax = 0 (suma)
+
+    loopSumarEstatico:
+        cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+        jae sumaEstaticoFin ; Si es así, salta al final
+
+        mov CX, word ptr ES:[di]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en CX
+        cmp CX, VACIO  ; Compara si el valor es VACIO
+        je nodoVacioSumaEstatico ; Si es VACIO, se ha encontrado un lugar para el nodo
+
+        add ax, CX  ; Suma el valor actual al acumulador (AX)
+        jmp nodoVacioSumaEstatico ; Salta al final
+
+        nodoVacioSumaEstatico:
+            add di, 2 ; Avanza al siguiente espacio de memoria (2 bytes por palabra)
+            jmp loopSumarEstatico ; Vuelve al bucle principal
+
+    sumaEstaticoFin:
+        out PUERTO_SALIDA, ax; Imprime la suma en el puerto de salida
+        mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+        out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+
+    jmp comienzoWhile
+    
+
+calcularSumaDinamico:
+    xor di, di; di = 0 (indice en memoria)
+    mov cx, AREA_MEMORIA
+    xor ax, ax; ax = 0 (suma)
+
+    loopSumarDinamico:
+        cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+        jae sumaDinamicoFin ; Si es así, salta al final
+
+        mov CX, word ptr ES:[di]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en CX
+        cmp CX, VACIO  ; Compara si el valor es VACIO
+        je nodoVacioSumaDinamico ; Si es VACIO, se ha encontrado un lugar para el nodo
+
+        add ax, CX  ; Suma el valor actual al acumulador (AX)
+        jmp nodoVacioSumaDinamico ; Salta al final
+
+        nodoVacioSumaDinamico:
+            add di, 6 ; Avanza al siguiente espacio de memoria (6 bytes por palabra)
+            jmp loopSumarDinamico ; Vuelve al bucle principal
+
+    sumaDinamicoFin:
+        out PUERTO_SALIDA, ax; Imprime la suma en el puerto de salida
+        mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+        out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+    
+    jmp comienzoWhile
 
 
 
@@ -358,7 +598,7 @@ detenerPrograma:
 
 ; ---------- SEGMENTO DE PUERTOS ----------
 .ports
-20: 1,1,2,5,2,-5,2,-4,2,8,6,10,255
+20: 1,0,2,100,2,200,2,50,2,30,2,150,4,1,1,2,102,2,202,2,52,2,32,2,152,4,255
 
 
 
