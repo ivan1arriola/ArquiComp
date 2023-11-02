@@ -318,6 +318,10 @@ obtenerAlturaIzqEstatico:
     add di, 2; Suma 2 para tener el indice al hijo izquierdo (que es menor)
 
     mov ax, di; Carga el indice del hijo izquierdo en AX (cada indice ocupa 2 bytes)
+
+    mov cx, es:[di]; Carga el indice del hijo izquierdo en CX (cada indice ocupa 2 bytes)
+    cmp cx, VACIO; Compara si el valor es VACIO
+    je alturaIzqCeroEstatico; Si es así, asigna 0 a la altura del hijo izquierdo
     
     
     push si; Pushea la direccion actual del nodo en la pila 
@@ -342,9 +346,13 @@ obtenerAlturaDerEstatico:
     add di, 4; Suma 4 para tener el indice al hijo derecho (que es mayor)
 
     mov ax, di; Carga el indice del hijo izquierdo en AX (cada indice ocupa 2 bytes)
+
+    mov cx, es:[di]; Carga el indice del hijo izquierdo en CX (cada indice ocupa 2 bytes)
+    cmp cx, VACIO; Compara si el valor es VACIO
+    je alturaDerCeroEstatico; asigna 0 a la altura del hijo derecho
     
 
-   
+    push bx; que es la altura del hijo izquierdo
     push si; Pushea la direccion actual del nodo en la pila
     push ax; Pushea para hacer lugar en la pila (Variable de salida)
     push ax; Pushea el indice en memoria en la pila (Variable de entrada)
@@ -354,6 +362,7 @@ obtenerAlturaDerEstatico:
     pop ax; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
     pop ax; Recupera la altura del hijo derecho y lo almaceno en AX
     pop si; Recupera la direccion actual del nodo
+    pop bx; Recupera la altura del hijo izquierdo y lo almaceno en BX
 
     jmp compararAlturaEstatico
 
@@ -439,6 +448,7 @@ obtenerAlturaIzq:
     add ax, es:[si + 2]; 
     add ax, es:[si + 2]; (6 bytes por nodo) Ahora ax tiene el indice del hijo izquierdo
     
+
     
     push si; Pushea la direccion actual del nodo en la pila 
     push bx; Pushea la altura en la pila (Variable de salida)
@@ -468,6 +478,7 @@ obtenerAlturaDer:
     add ax, es:[si + 4]; (6 bytes por nodo) Ahora ax tiene el indice del hijo izquierdo
 
    
+    push bx; que es la altura del hijo izquierdo
     push si; Pushea la direccion actual del nodo en la pila
     push ax; Pushea para hacer lugar en la pila (Variable de salida)
     push ax; Pushea el indice en memoria en la pila (Variable de entrada)
@@ -477,6 +488,7 @@ obtenerAlturaDer:
     pop ax; Recupera el indice en memoria del hijo derecho (Lo voy a descartar realmente)
     pop ax; Recupera la altura del hijo derecho y lo almaceno en AX
     pop si; Recupera la direccion actual del nodo
+    pop bx; Recupera la altura del hijo izquierdo y lo almaceno en BX
 
     jmp comparar
 
