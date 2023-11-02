@@ -87,6 +87,12 @@ comienzoWhile:
     cmp ax, CALCULAR_SUMA
     je calcularSuma
 
+    cmp ax, IMPRIMIR_ARBOL
+    je imprimirArbol
+
+    cmp ax, IMPRIMIR_MEMORIA
+    je imprimirMemoria
+
     cmp ax, DETENER_PROGRAMA
     je detenerPrograma
 
@@ -103,10 +109,12 @@ cambiarModo:
 
     cmp ax, 1
     je cambiarModoParametroCorrecto ; Salta a "cambiarModoParametroCorrecto" si ax es igual a 1
+
+    
 	jmp parametroIncorrecto; Si no se cumple ninguna de las anteriores, el parametro es incorrecto
 
 	cambiarModoParametroCorrecto:
-		mov word ptr [modo], AX
+		mov [modo], ax ; Guarda el valor del modo en la variable modo
 		mov AX, CODIGO_EXITO
 		out PUERTO_LOG, ax 
 	
@@ -116,28 +124,31 @@ agregarNodo:
     in ax, PUERTO_ENTRADA ; lee el valor del nodo de la entrada
 	out PUERTO_LOG, AX; imprime el valor en el puerto log
 
-    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
-    jmp agregarNodoModoEstatico
+    mov word ptr [num], ax ; Guarda el valor del nodo en la variable num
 
-    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
-    jmp agregarNodoModoDinamico
+    cmp byte ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    je agregarNodoModoEstatico
+
+    cmp byte ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    je agregarNodoModoDinamico
+
+    jmp errorDesconocido ; Si no se cumple ninguna de las anterior, algo esta mal
+
+
+
 
 
 agregarNodoModoEstatico: ; Nodo = [valor], hijos se calculan con el indice
-
-    mov word ptr [num], ax ; Guarda el valor del nodo en la variable num
     mov si, 0  ; Inicializa el índice en 0
-
-
     whileAgregarNodoEstatico:
         cmp si, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
         jae errorEscribirFueraDeArea ; Si es así, salta al manejo de error (fuera de área)
 
-        mov CX, word ptr ES:[si]  ; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
+        mov CX, ES:[si]  ; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
         cmp CX, VACIO  ; Compara si el valor es VACIO
         je nodoVacioEncontrado ; Si es VACIO, se ha encontrado un lugar para el nodo
 
-        cmp CX, AX  ; Compara el valor actual con el valor a agregar (CX y AX)
+        cmp AX, CX  ; Compara el valor actual con el valor a agregar (CX y AX)
         je nodoDuplicado ; Si son iguales, el nodo ya existe
         jl moverIzquierda ; Si el valor actual es menor que el valor a agregar, muévete a la izquierda
         jge moverDerecha ; Si es mayor o igual, muévete a la derecha
@@ -151,117 +162,120 @@ agregarNodoModoEstatico: ; Nodo = [valor], hijos se calculan con el indice
             jmp errorNodoYaExiste ; Salta al manejo de error (nodo duplicado)
         moverIzquierda:
             shl si, 1  ; Mueve a la izquierda (multiplica por 2)
-            shl si, 1  ; Mueve a la izquierda (multiplica por 2)
             add si, 2  ; Agrega 2 para ir al hijo izquierdo
             jmp whileAgregarNodoEstatico ; Vuelve al bucle principal
         moverDerecha:
             shl si, 1  ; Mueve a la derecha (multiplica por 2)
-            shl si, 1  ; Mueve a la derecha (multiplica por 2)
             add si, 4  ; Agrega 4 para ir al hijo derecho
             jmp whileAgregarNodoEstatico ; Vuelve al bucle principal
 
-agregarNodoModoDinamico:; Nodo = [valor, Indice de hijoIzquierdo, Indice de hijoDerecho]
-    ; Si el árbol está vacío, crea un nuevo nodo y hazlo raíz.
-    mov si, 0
-    mov cx, es:[si]
-    cmp cx, VACIO
-    jne buscarLugarLibre
 
-    ; �?rbol vacío, crea nuevo nodo raíz
-    mov es:[si], ax
-    mov ax, CODIGO_EXITO
-    out PUERTO_LOG, ax
-    ret
+
+
+agregarNodoModoDinamico:; Nodo = [valor, Indice de hijoIzquierdo, Indice de hijoDerecho]
+
+    mov cx, es:[0]; Carga el valor del nodo 0 en CX
+    cmp cx, VACIO;  Si el árbol está vacío, crea un nuevo nodo y hazlo raíz.
+    jne buscarLugarLibre; Si no está vacío, busca un lugar libre para agregar el nuevo nodo
+
+    ; Arbol vacío, crea nuevo nodo raíz
+    mov es:[0], ax
+    jmp agregarNodoModoDinamicoFin
+
 
 buscarLugarLibre:
-    ; Encuentra el primer lugar desocupado de la memoria
-    mov word ptr [num], ax ; Guarda el valor del nodo en la variable num
-    xor si, si; si será el índice de la memoria
-    xor bx, bx  ; bx será el indice en el arreglo de nodos
-buscarLugarLibreLoop:
-    mov cx, es:[si]; Carga el valor del nodo actual en CX
+
+    xor di, di; di es el índice en memoria, inicializado en 0
+    xor ax, ax; ax es la ubicación dentro del arreglo de nodos, inicializado en 0
+    mov bx, word ptr [num]; bx es el valor del nodo nuevo a insertar
+
+    loopBuscarLugarEnArreglo:
+        inc ax; Incrementa en 1 la ubicación dentro del arreglo de nodos
+        add di, 6; Suma 6 para avanzar al siguiente nodo (6 bytes por nodo)
+
+        mov cx, es:[di]; Carga el valor del nodo actual en CX
+        cmp cx, bx; Compara el valor actual con el valor a agregar (CX y BX)
+        je errorNodoYaExiste ; si son iguales, el nodo ya existe; por construccion tiene que pasar por todos los nodos antes de llegar a un nodo vacio
+
+        cmp cx, VACIO; Compara si el valor actual es VACIO, si no es vacio repite el loop
+        jne loopBuscarLugarEnArreglo
+
+    mov si, di; cargo si para usarlo para chequear si hay lugar suficiente para agregar el nuevo nodo
+    add si, 5; Sumo 5 para saber si hay lugar suficiente para agregar el nuevo nodo
+    cmp si, AREA_MEMORIA; Compara si el índice en memoria está fuera del área de memoria
+    jae errorEscribirFueraDeArea; Si es así, salta al manejo de error (fuera de área)
+
+crearNuevoNodo: ; Crea un nuevo nodo en el lugar libre (DI) encontrado
+
+    mov es:[di], bx; Carga el valor del nodo en la dirección de memoria del nuevo nodo
+    mov es:[di + 2], VACIO; Carga el valor VACIO en la dirección de memoria del hijo izquierdo
+    mov es:[di + 4], VACIO; Carga el valor VACIO en la dirección de memoria del hijo derecho
+
+conectarNodo: ; Conecta el nuevo nodo al árbol ; Se asume que el nuevo nodo no es la raíz
+
+    xor di, di; di indica el índice en memoria, inicializado en 0
+    mov bx, word ptr [num]; bx es el valor del nodo nuevo
+
+conectarNodoLoop:
+    mov cx, es:[di]; Carga el valor del nodo actual en CX
+
+    cmp cx, bx; Compara el valor actual con el valor a agregar (CX y BX)
+    jl buscarEnIzquierda ; Si el valor actual es menor que el valor a agregar, muévete a la izquierda
+    jge buscarEnDerecha ; Si es mayor o igual, muévete a la derecha
+
+buscarEnIzquierda:
+    mov cx, es:[di + 2]; Carga el indice del hijo izquierdo en CX (cada indice ocupa 6 bytes)
     cmp cx, VACIO; Compara si el valor es VACIO
-    jne lugarNoVacio ; Si no es vacío, salta al lugarNoVacio
-lugarVacio:
-    mov bx, si ; Almacena el índice del lugar libre en BX (indice en memoria)
-    jmp lugarLibreEncontrado
-lugarNoVacio:
-    inc bx ; Incrementa el índice en el arreglo de nodos
-    add si, 3 ; Incrementa el indice en memoria
-    cmp si, AREA_MEMORIA ; Compara si el indice en memoria está fuera del área de memoria
-    jl buscarLugarLibreLoop
+    je conectarNodoIzquierda ; Si es VACIO, se ha encontrado un lugar para el nodo
 
-lugarLibreEncontrado:
-    ; Verifica que haya lugar para el nodo completo
-    mov ax , si ; Carga el índice en memoria del lugar libre en AX
-    add ax , 2 ; Suma 2 para obtener el índice del ultimo elemento del nodo
-    cmp ax, AREA_MEMORIA ; Compara para ver si el índice del último elemento del nodo está fuera del área de memoria
-    jg errorEscribirFueraDeArea ; Si es así, salta al manejo de error (fuera de área)
+    ; Si no es VACIO, avanzar al nodo hijo izquierdo
+    mov di, cx; Carga el indice del hijo izquierdo en DI
+    add di, cx; Suma el indice del hijo izquierdo a DI
+    add di, cx; Suma el indice del hijo izquierdo a DI
+    add di, cx; Suma el indice del hijo izquierdo a DI
+    add di, cx; Suma el indice del hijo izquierdo a DI
+    add di, cx; Suma el indice del hijo izquierdo a DI (6 bytes por nodo)
 
-    ; Falta Verificar que efectivamente esta vacío el lugar
+    jmp conectarNodoLoop ; Vuelve al bucle principal
 
-    mov cx, es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
-    cmp cx, VACIO ; Compara si el valor es VACIO
-    jne errorEscribirFueraDeArea
-; Encuentra el nodo padre del nuevo nodo
-    xor si, si; si será el índice de la memoria
-    mov ax, word ptr [num]; Carga el valor del nodo en AX
-    mov word ptr [lugarLibre], bx; Carga el índice del lugar libre en lugarLibre
-encontrarPadre:
-    mov cx, es:[si]; Carga el valor del nodo actual en CX
-    cmp cx, ax; Compara el valor actual con el valor a agregar (CX y AX)
-    je errorNodoYaExiste ; Si son iguales, el nodo ya existe
-    jl hijoIzquierdo; Si el valor actual es menor, intenta enchufarlo en el hijo izquierdo
-    ; Si el valor actual es mayor, intenta enchufarlo en el hijo derecho
-hijoDerecho:    ; 
-    cmp es:[si + 2], VACIO ; Compara si el hijo derecho está vacío
-    jne hijoDerechoNoVacio; Si no está vacío, salta al hijoDerechoNoVacio
-    add si, 2; Si está vacío, agrega 2 para ir al hijo derecho
-    jmp nuevoNodoCreado
-hijoDerechoNoVacio:
-    mov bx, si; Como no está vacío, carga el índice del hijo derecho en BX
-    add bx, si; Sumo para simular una multiplicación por 3
-    add bx, si; Sumo para simular una multiplicación por 3
-    mov si, bx; Cargo el índice en memoria en SI
-    jmp encontrarPadre; Vuelve a buscar el padre del nuevo nodo
+ buscarEnDerecha:
+    mov cx, es:[di + 4]; Carga el indice del hijo derecho en CX (cada indice ocupa 6 bytes)
+    cmp cx, VACIO; Compara si el valor es VACIO
+    je conectarNodoDerecha ; Si es VACIO, se ha encontrado un lugar para el nodo
 
-hijoIzquierdo:
-    cmp es:[si + 1], VACIO; Compara si el hijo izquierdo está vacío
-    jne hijoIzquierdoNoVacio; Si no está vacío, salta al hijoIzquierdoNoVacio
-    inc si; Si está vacío, agrega 1 para ir al hijo izquierdo
-    jmp nuevoNodoCreado
-hijoIzquierdoNoVacio:
-    mov bx, si; Como no está vacío, carga el índice del hijo derecho en BX
-    add bx, si; Sumo para simular una multiplicación por 3
-    add bx, si; Porque el indice en memoria es 3 veces el indice en el arreglo de nodos
-    mov si, bx; Cargo el índice en memoria en SI
-    jmp encontrarPadre; Vuelve a buscar el padre del nuevo nodo
+    ; Si no es VACIO, avanzar al nodo hijo derecho
+    mov di, cx; Carga el indice del hijo derecho en DI
+    add di, cx; Suma el indice del hijo derecho a DI
+    add di, cx; Suma el indice del hijo derecho a DI
+    add di, cx; Suma el indice del hijo derecho a DI
+    add di, cx; Suma el indice del hijo derecho a DI
+    add di, cx; Suma el indice del hijo derecho a DI (6 bytes por nodo)
 
-nuevoNodoCreado: ; SI queda apuntando al la direccion de uno de los hijos del padre del nuevo nodo
+    jmp conectarNodoLoop ; Vuelve al bucle principal
 
-    mov cx, word ptr [lugarLibre]; Carga el índice del lugar libre en CX
-    mov es:[si], cx; Carga el índice del lugar libre en la dirección de memoria del hijo del padre del nuevo nodo
+conectarNodoIzquierda:
+    mov es:[di + 2], ax; Carga el valor del nodo en la dirección de memoria del hijo izquierdo
+    jmp agregarNodoModoDinamicoFin
 
-    ; Carga el nuevo nodo en el lugar libre
-    mov si, cx; Carga el índice del lugar libre en SI, pero hay que multiplicarlo por 3
-    add si, cx; Sumo para simular una multiplicación por 2
-    add si, cx; Sumo para simular una multiplicación por 2
+conectarNodoDerecha:
+    mov es:[di + 4], ax; Carga el valor del nodo en la dirección de memoria del hijo derecho
+    jmp agregarNodoModoDinamicoFin
 
-    mov es:[si], ax; Carga el valor del nodo en la dirección de memoria apuntada por ES:SI
-
-    mov ax, CODIGO_EXITO
-    out PUERTO_LOG, ax
+agregarNodoModoDinamicoFin:
+    mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+    out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
     jmp comienzoWhile
 
 
 calcularAltura:
-    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
-    jmp calcularAlturaEstatico
+    cmp byte ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    je calcularAlturaEstatico
 
-    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
-    jmp calcularAlturaDinamico
+    cmp byte ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    je calcularAlturaDinamico
 
-; Modo estatico
+    jmp errorDesconocido ; Si no se cumple ninguna de las anterior, algo esta mal
+
 
 calcularAlturaEstatico:
     xor ax, ax; ax = 0 (altura)
@@ -358,7 +372,7 @@ calcularAlturaDinamico:
     push ax; Guarda el valor de ax en la pila (Variable de salida)
     push si; Guarda el valor de si en la pila (Variable de entrada)
 
-    ;call calcularAlturaDinamicoRecursivo
+    call calcularAlturaDinamicoRecursivo
 
     pop si; Recupera el valor de si de la pila (Variable de entrada)
     pop ax; Recupera el valor de ax de la pila (Variable de salida)
@@ -383,7 +397,7 @@ calcularAlturaDinamicoRecursivo PROC
 
 calcularAlturaHijoIzquierdoDinamico:
     mov bx , si; en bx guardo el indice en memoria del hijo izquierdo
-    add bx, 1; le sumo 1 para obtener el indice en memoria del hijo izquierdo
+    add bx, 2; le sumo 1 para obtener el indice en memoria del hijo izquierdo
 
     push ax; Pusheo AX para almacenar la altura del hijo izquierdo
     push bx; Pusheo el indice en memoria del hijo izquierdo
@@ -395,7 +409,7 @@ calcularAlturaHijoIzquierdoDinamico:
 
 calcularAlturaHijoDerechoDinamico:
     mov cx , si; en cx guardo el indice en memoria del hijo derecho
-    add cx, 2; le sumo 2 para obtener el indice en memoria del hijo derecho
+    add cx, 4; le sumo 4 para obtener el indice en memoria del hijo derecho
 
     push ax; Pusheo AX para almacenar la altura del hijo derecho
     push cx; Pusheo el indice en memoria del hijo derecho
@@ -430,11 +444,14 @@ calcularAlturaDinamicoRecursivo ENDP
 
 
 calcularSuma:
-    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
-    jmp calcularSumaEstatico
+    cmp byte ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    je calcularSumaEstatico
 
-    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
-    jmp calcularSumaDinamico
+    cmp byte ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    je calcularSumaDinamico
+
+    jmp errorDesconocido ; Si no se cumple ninguna de las anterior, algo esta mal
+
 
 
 calcularSumaEstatico:
@@ -493,6 +510,83 @@ calcularSumaDinamico:
     jmp comienzoWhile
 
 
+imprimirMemoria:
+    mov AL, byte ptr [modo]; Carga el modo en AX
+
+    cmp AL, 0 ; Si modo es 0, se accede al modo estatico
+    je imprimirMemoriaEstatico
+
+    cmp AL, 1 ; Si modo es 1, se accede al modo dinamico
+    je imprimirMemoriaDinamico
+
+    jmp errorDesconocido ; Si no se cumple ninguna de las anterior, algo esta mal
+
+
+
+
+imprimirMemoriaEstatico:
+    in ax, PUERTO_ENTRADA ; lee el n cantidad de espacios de memoria a imprimir
+    out PUERTO_LOG, AX; imprime el valor en el puerto log
+
+    ;Si el valor es menor a 0, imprime error
+    cmp ax, 0
+    jl parametroIncorrecto
+
+
+    xor di, di; di = 0 
+    mov cx, ax; cx = ax (cantidad de espacios de memoria a imprimir)
+
+    imprimirMemoriaEstaticoLoop:
+        cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+        jae imprimirMemoriaEstaticoFin ; Si es así, salta al final
+
+        cmp di, ax; Compara si se llego a la cantidad de espacios de memoria a imprimir
+        jae imprimirMemoriaEstaticoFin ; Si es así, salta al final
+
+        mov AX, word ptr ES:[di]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en AX
+
+        out PUERTO_SALIDA, AX; Imprime el valor del nodo actual en el puerto de salida
+
+        add di, 2 ; Avanza al siguiente espacio de memoria (2 bytes por palabra)
+        jmp imprimirMemoriaEstaticoLoop ; Vuelve al bucle principal
+    
+    imprimirMemoriaEstaticoFin:
+        mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+        out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+        jmp comienzoWhile
+
+imprimirMemoriaDinamico:
+    in ax, PUERTO_ENTRADA ; lee el n cantidad de espacios de memoria a imprimir
+    out PUERTO_LOG, AX; imprime el valor en el puerto log
+
+    xor di, di; di = 0
+    mov cx, ax; cx = ax (cantidad de espacios de memoria a imprimir)
+
+    imprimirMemoriaDinamicoLoop:
+        cmp di, AREA_MEMORIA  ; Compara si hemos llegado al final del área de memoria
+        jae imprimirMemoriaDinamicoFin ; Si es así, salta al final
+
+        cmp di, ax; Compara si se llego a la cantidad de espacios de memoria a imprimir
+        jae imprimirMemoriaDinamicoFin ; Si es así, salta al final
+
+        mov AX, word ptr ES:[di]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en AX
+        out PUERTO_SALIDA, AX; Imprime el valor del nodo actual en el puerto de salida
+
+        mov AX, word ptr ES:[di + 2]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en AX
+        out PUERTO_SALIDA, AX; Imprime el valor del nodo actual en el puerto de salida
+
+        mov AX, word ptr ES:[di + 4]  ; Carga el valor en la dirección de memoria apuntada por ES:DI en AX
+        out PUERTO_SALIDA, AX; Imprime el valor del nodo actual en el puerto de salida
+
+        add di, 6 ; Avanza al siguiente espacio de memoria (6 bytes por palabra)
+        jmp imprimirMemoriaDinamicoLoop ; Vuelve al bucle principal
+    imprimirMemoriaDinamicoFin:
+        mov ax, CODIGO_EXITO; Carga el código de éxito en AX
+        out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
+        jmp comienzoWhile
+
+
+
 
 
 imprimirArbol:
@@ -510,19 +604,19 @@ imprimirArbol:
 
 imprimirArbolAscendente:    
 
-    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
-    jmp imprimirArbolAscendenteEstatico
+    cmp byte ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    je imprimirArbolAscendenteEstatico
 
-    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
-    jmp imprimirArbolAscendenteDinamico
+    cmp byte ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    je imprimirArbolAscendenteDinamico
 
 imprimirArbolDescendente:
 
-    cmp word ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
-    jmp imprimirArbolDescendenteEstatico
+    cmp byte ptr [modo], 0 ; Si modo es 0, se accede al modo estatico
+    je imprimirArbolDescendenteEstatico
 
-    cmp word ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
-    jmp imprimirArbolDescendenteDinamico
+    cmp byte ptr [modo], 1 ; Si modo es 1, se accede al modo dinamico
+    je imprimirArbolDescendenteDinamico
 
 
 imprimirArbolAscendenteEstatico:
@@ -766,40 +860,10 @@ errorEscribirFueraDeArea:
 
 
 
-
-; Tuve que hacer los procedimientos porque no me daban los registros para hacerlo con saltos
-parametroIncorrectoProc PROC
-    push AX
-    mov AX, CODIGO_PARAMETRO_INVALIDO
-    out PUERTO_LOG, ax 
+errorDesconocido:
+    mov AX, 1234
+    out 30, ax 
     jmp comienzoWhile
-    pop AX
-    ret
-parametroIncorrectoProc ENDP
-comandoIncorrectoProc PROC
-    push AX
-    mov AX, CODIGO_COMANDO_INVALIDO
-    out PUERTO_LOG, ax 
-    jmp comienzoWhile
-    pop AX
-    ret
-comandoIncorrectoProc ENDP
-errorNodoYaExisteProc PROC
-    push AX
-    mov ax, CODIGO_NODO_YA_EXISTE
-    out PUERTO_LOG, ax
-    jmp comienzoWhile
-    pop AX
-    ret
-errorNodoYaExisteProc ENDP
-errorEscribirFueraDeAreaProc PROC
-    push AX
-    mov AX, CODIGO_ESCRIBIR_FUERA_DE_AREA
-    out PUERTO_LOG, ax 
-    jmp comienzoWhile
-    pop AX
-    ret
-errorEscribirFueraDeAreaProc ENDP
 
 
 
@@ -812,14 +876,10 @@ detenerPrograma:
 
 
 
-
-
-
-
-
 ; ---------- SEGMENTO DE PUERTOS ----------
 .ports
-20: 1,1,2,5,2,-5,2,-4,2,8,6,10,255
+20:1,1 , 3, 2, 1 ,3,  2, 2, 2, 3, 2, 23, 3,  2, -7, 2, -10, 3, 2, 2,3,  255
+
 
 
 
