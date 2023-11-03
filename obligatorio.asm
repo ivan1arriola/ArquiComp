@@ -719,10 +719,10 @@ imprimirArbolDescendente:
 
 
 imprimirArbolAscendenteEstatico:
-    xor di, di; di = 0 
-    push di;
+    xor si, si; si = 0
+    push si;
     call imprimirArbolAscendenteEstaticoR
-    pop di;
+    pop si;
     mov ax, CODIGO_EXITO; Carga el código de éxito en AX
     out PUERTO_LOG, ax; Imprime el código de éxito en el puerto log
     jmp comienzoWhile
@@ -730,16 +730,16 @@ imprimirArbolAscendenteEstatico:
     
 imprimirArbolAscendenteEstaticoR PROC
 
-   pop dx; salvo direccion de retorno
+    pop dx; salvo direccion de retorno
     pop si; indice en memoria (Parametro de entrada)
     push dx; pusheo direccion de retorno (lo pusheo de nuevo porque lo necesito para el final)
 
     cmp si, AREA_MEMORIA; Compara si el índice en memoria está fuera del área de memoria
-    jge imprimirArbolDescendenteEstaticoFin; Si es así, salta al final
+    jge imprimirArbolAscendenteEstaticoFin; Si es así, salta al final
 
     mov cx, es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en CX
     cmp cx, VACIO; Compara si el valor es VACIO
-    je imprimirArbolDescendenteEstaticoFin; Si es así, no se imprime el nodo
+    je imprimirArbolAscendenteEstaticoFin; Si es así, no se imprime el nodo
 
     imprimirHijoIzquierdoAscendenteEstatico:
 
@@ -751,18 +751,19 @@ imprimirArbolAscendenteEstaticoR PROC
         cmp cx, VACIO; Compara si el valor es VACIO
         je imprimirNodoAscendenteEstatico
 
+        push si; Pushea la direccion actual del nodo en la pila
         push di; Pushea la direccion del hijo derecho en la pila
     
         call imprimirArbolAscendenteEstaticoR
 
         pop di; Recupera la direccion actual del nodo
+        pop si; Recupera la direccion actual del nodo
 
 
     imprimirNodoAscendenteEstatico:
         mov ax , word ptr es:[si]; Carga el valor en la dirección de memoria apuntada por ES:SI en AX
         out PUERTO_SALIDA, ax; Imprime el valor de AX en el puerto de salida    
-        
-        jmp imprimirHijoDerechoAscendenteEstatico; Salta al final    
+
 
     imprimirHijoDerechoAscendenteEstatico:
         mov di, si
@@ -774,12 +775,15 @@ imprimirArbolAscendenteEstaticoR PROC
         je imprimirArbolAscendenteEstaticoFin
         
 
+        push si; Pushea la direccion actual del nodo en la pila
         push di; Pushea la direccion del hijo derecho en la pila
     
         call imprimirArbolAscendenteEstaticoR
 
         pop di; Recupera la direccion actual del nodo
+        pop si; Recupera la direccion actual del nodo
 
+    
 
     imprimirArbolAscendenteEstaticoFin:
         pop dx; Recupero direccion de retorno (Para poner ponerlo arriba de todo)
@@ -822,11 +826,13 @@ imprimirArbolDescendenteEstaticoR PROC
         je imprimirNodoDescendenteEstatico
         
 
+        push si; Pushea la direccion actual del nodo en la pila
         push di; Pushea la direccion del hijo derecho en la pila
     
         call imprimirArbolDescendenteEstaticoR
 
         pop di; Recupera la direccion actual del nodo
+        pop si; Recupera la direccion actual del nodo
 
 
     imprimirNodoDescendenteEstatico:
